@@ -1,4 +1,4 @@
-const { Artwork } = require('../db');
+const { Artwork, Product } = require('../db');
 const { slugify } = require('../utils/slugify');
 const {
     isValidObjectId,
@@ -173,15 +173,21 @@ const softDeleteAdminArtwork = async (req, res) => {
             return res.status(400).json({ error: 'Invalid artwork id' });
         }
 
+        const now = new Date();
         const artwork = await Artwork.findOneAndUpdate(
             { _id: id, deleted_at: null },
-            { deleted_at: new Date() },
+            { deleted_at: now, is_active: false },
             { new: true }
         );
 
         if (!artwork) {
             return res.status(404).json({ error: 'Artwork not found' });
         }
+
+        await Product.updateMany(
+            { artwork_id: id, deleted_at: null },
+            { $set: { is_active: false, deleted_at: now } }
+        );
 
         res.json(artwork);
     } catch (err) {

@@ -1,22 +1,20 @@
 /**
- * LangGraph workflow for Instagram-ready copy from a rough artwork description.
+ * LangGraph: Instagram-ready copy from a rough artwork description.
  *
- * Nodes (in order): startRequest → getAllContext → generateIGComponents → formatOutput → returnResponse.
- * Uses getPreferredExamples as memory during context; Ollama (gpt-oss:20b) for generation; Zod to validate model JSON.
+ * - Static edges: linear prep and tool-invocation steps.
+ * - Conditional edges: route after generation (validate vs fail); route after validation (success vs retry vs fail).
+ * - Two LangChain tools (Zod schemas in igTools.js): fetch preferred examples, generate draft via Ollama.
  */
 
-const { Ollama } = require('ollama');
 const { StateGraph, START, END, Annotation } = require('@langchain/langgraph');
 
-const { getPreferredExamples } = require('./preferredExamplesStore');
+const {
+    fetchPreferredCopyExamplesTool,
+    generateIgDraftFromPromptTool
+} = require('./igTools');
 const { modelIgOutputSchema } = require('./schemas');
 
-const ollama = new Ollama({
-    host: 'http://golem:11434'
-});
-const model = 'gpt-oss:20b';
-
-// --- Graph state: one channel per field; each node returns partial updates (last value wins).
+const MAX_GENERATION_ATTEMPTS = 3;
 
 const IgState = Annotation.Root({
     userInput: Annotation(),
@@ -27,6 +25,7 @@ const IgState = Annotation.Root({
     hookExamples: Annotation(),
     captionExamples: Annotation(),
     ctaExamples: Annotation(),
+    generationAttempt: Annotation(),
     rawModelText: Annotation(),
     hooks: Annotation(),
     captions: Annotation(),
@@ -44,17 +43,27 @@ function formatExamplesList(label, items) {
 }
 
 function buildGenerationPrompt(state) {
-    const voice = (state.personalizedVoice || '').trim() || '(no extra style notes — use a warm, artist-friendly Instagram tone.)';
+    const voice =
+        (state.personalizedVoice || '').trim() ||
+        '(no extra style notes — use a warm, artist-friendly Instagram tone.)';
     const tone = state.tone || 'Simple';
     const focus = state.focus || 'Story';
     const hooksEx = formatExamplesList('Preferred hook examples (user liked these)', state.hookExamples);
-    const capsEx = formatExamplesList('Preferred caption examples (user liked these)', state.captionExamples);
+    const capsEx = formatExamplesList(
+        'Preferred caption examples (user liked these)',
+        state.captionExamples
+    );
     const ctasEx = formatExamplesList('Preferred CTA examples (user liked these)', state.ctaExamples);
+
+    const retryNote =
+        (state.generationAttempt || 0) > 0
+            ? `\n=== RETRY ===\nYour previous reply was not valid JSON or failed schema checks. Output ONLY one JSON object with keys hooks, captions, ctas, hashtags — no markdown fences, no extra text.\n`
+            : '';
 
     return `
 === SYSTEM ROLE ===
 You help a visual artist turn a rough description of their artwork into Instagram post components. Be faithful to the art described. Output must be valid JSON only — no markdown, no commentary outside the JSON object.
-
+${retryNote}
 === USER REQUEST (artwork / piece) ===
 ${state.formattedRequest}
 
@@ -87,9 +96,6 @@ Do not include any keys other than hooks, captions, ctas, hashtags. No text befo
 `.trim();
 }
 
-/**
- * Strip optional markdown code fences so JSON.parse succeeds.
- */
 function extractJsonObjectText(raw) {
     let s = String(raw || '').trim();
     if (!s) return s;
@@ -99,9 +105,19 @@ function extractJsonObjectText(raw) {
     return s.trim();
 }
 
+function isRetryableValidationError(message) {
+    const m = String(message || '');
+    return (
+        m.includes('not valid JSON') ||
+        m.includes('Output failed validation') ||
+        m.includes('Model output was not valid JSON')
+    );
+}
+
 // ---------------------------------------------------------------------------
-// Node 1: startRequestNode — entry; place inputs into state and clear error.
+// Nodes
 // ---------------------------------------------------------------------------
+
 function startRequestNode(state) {
     return {
         userInput: state.userInput,
@@ -109,6 +125,7 @@ function startRequestNode(state) {
         tone: state.tone ?? 'Simple',
         focus: state.focus ?? 'Story',
         error: null,
+        generationAttempt: 0,
         rawModelText: '',
         hooks: [],
         captions: [],
@@ -118,26 +135,34 @@ function startRequestNode(state) {
     };
 }
 
-// ---------------------------------------------------------------------------
-// Node 2: getAllContextNode — normalize description + load preferred examples.
-// ---------------------------------------------------------------------------
-function getAllContextNode(state) {
+function prepareContextNode(state) {
     const formattedRequest = String(state.userInput || '')
         .replace(/\s+/g, ' ')
         .trim();
-    const { hooks, captions, ctas } = getPreferredExamples();
+    return { formattedRequest };
+}
+
+async function fetchExamplesToolNode(state) {
+    const raw = await fetchPreferredCopyExamplesTool.invoke({ categories: 'all' });
+    let parsed;
+    try {
+        parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch {
+        return {
+            hookExamples: [],
+            captionExamples: [],
+            ctaExamples: [],
+            error: 'Failed to parse preferred examples tool output.'
+        };
+    }
     return {
-        formattedRequest,
-        hookExamples: hooks,
-        captionExamples: captions,
-        ctaExamples: ctas
+        hookExamples: parsed.hooks || [],
+        captionExamples: parsed.captions || [],
+        ctaExamples: parsed.ctas || []
     };
 }
 
-// ---------------------------------------------------------------------------
-// Node 3: generateIGComponentsNode — call Ollama; store raw text or error.
-// ---------------------------------------------------------------------------
-async function generateIGComponentsNode(state) {
+async function generateToolNode(state) {
     if (state.error) {
         return {};
     }
@@ -147,29 +172,23 @@ async function generateIGComponentsNode(state) {
 
     const prompt = buildGenerationPrompt(state);
     try {
-        const response = await ollama.chat({
-            model,
-            messages: [{ role: 'user', content: prompt }],
-            options: { temperature: 0.6 }
+        const raw = await generateIgDraftFromPromptTool.invoke({
+            promptText: prompt,
+            temperature: 0.7
         });
-        const content = response?.message?.content;
-        if (!content || !String(content).trim()) {
-            return { error: 'The model returned an empty response.' };
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (!parsed.ok) {
+            return { error: parsed.error || 'Generation tool failed.' };
         }
-        return { rawModelText: String(content) };
+        return { rawModelText: parsed.rawText, error: null };
     } catch (err) {
         const msg =
-            err && err.message
-                ? String(err.message)
-                : 'Failed to reach the language model.';
+            err && err.message ? String(err.message) : 'Failed to reach the language model.';
         return { error: msg };
     }
 }
 
-// ---------------------------------------------------------------------------
-// Node 4: formatOutputNode — parse JSON, validate with Zod, set outputJson or error.
-// ---------------------------------------------------------------------------
-function formatOutputNode(state) {
+function validateOutputNode(state) {
     if (state.error) {
         return {};
     }
@@ -201,34 +220,82 @@ function formatOutputNode(state) {
             captions: data.captions,
             ctas: data.ctas,
             hashtags: data.hashtags
-        }
+        },
+        error: null
     };
 }
 
-// ---------------------------------------------------------------------------
-// Node 5: returnResponseNode — final pass; state already holds outputJson / error.
-// ---------------------------------------------------------------------------
-function returnResponseNode(state) {
+function bumpRetryNode(state) {
+    return {
+        generationAttempt: (state.generationAttempt || 0) + 1,
+        error: null,
+        rawModelText: '',
+        outputJson: null
+    };
+}
+
+function finalizeNode(state) {
     if (state.error) {
         return { outputJson: null };
     }
-    return {
-        outputJson: state.outputJson
-    };
+    return { outputJson: state.outputJson };
 }
+
+// ---------------------------------------------------------------------------
+// Routing (conditional edges)
+// ---------------------------------------------------------------------------
+
+/** After LLM tool: empty description errors skip validation; otherwise always validate when no transport error. */
+function routeAfterGenerate(state) {
+    if (state.error) {
+        return 'finalize';
+    }
+    return 'validate';
+}
+
+/** After Zod/JSON check: success, bounded retry on parse/schema only, or finalize with error. */
+function routeAfterValidate(state) {
+    if (state.outputJson) {
+        return 'success';
+    }
+    const attempt = state.generationAttempt || 0;
+    if (
+        attempt < MAX_GENERATION_ATTEMPTS - 1 &&
+        state.error &&
+        isRetryableValidationError(state.error)
+    ) {
+        return 'retry';
+    }
+    return 'finalize';
+}
+
+// ---------------------------------------------------------------------------
+// Graph
+// ---------------------------------------------------------------------------
 
 const igGenerationGraph = new StateGraph(IgState)
     .addNode('startRequest', startRequestNode)
-    .addNode('getAllContext', getAllContextNode)
-    .addNode('generateIGComponents', generateIGComponentsNode)
-    .addNode('formatOutput', formatOutputNode)
-    .addNode('returnResponse', returnResponseNode)
+    .addNode('prepareContext', prepareContextNode)
+    .addNode('fetchExamplesTool', fetchExamplesToolNode)
+    .addNode('generateTool', generateToolNode)
+    .addNode('validateOutput', validateOutputNode)
+    .addNode('bumpRetry', bumpRetryNode)
+    .addNode('finalize', finalizeNode)
     .addEdge(START, 'startRequest')
-    .addEdge('startRequest', 'getAllContext')
-    .addEdge('getAllContext', 'generateIGComponents')
-    .addEdge('generateIGComponents', 'formatOutput')
-    .addEdge('formatOutput', 'returnResponse')
-    .addEdge('returnResponse', END)
+    .addEdge('startRequest', 'prepareContext')
+    .addEdge('prepareContext', 'fetchExamplesTool')
+    .addEdge('fetchExamplesTool', 'generateTool')
+    .addConditionalEdges('generateTool', routeAfterGenerate, {
+        validate: 'validateOutput',
+        finalize: 'finalize'
+    })
+    .addConditionalEdges('validateOutput', routeAfterValidate, {
+        success: 'finalize',
+        retry: 'bumpRetry',
+        finalize: 'finalize'
+    })
+    .addEdge('bumpRetry', 'generateTool')
+    .addEdge('finalize', END)
     .compile();
 
 async function runIgGeneration(input) {
