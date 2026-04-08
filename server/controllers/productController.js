@@ -1,12 +1,19 @@
-const { Product } = require('../db');
+const { Product, Artwork } = require('../db');
 const { applyProductRelations } = require('../utils/productPopulate');
+
+/** Artworks that may appear on the storefront (gallery + detail). */
+async function storefrontArtworkIds() {
+    return Artwork.find({ is_active: true, deleted_at: null }).distinct('_id');
+}
 
 const listPublicProducts = async (req, res) => {
     try {
+        const allowedArtworkIds = await storefrontArtworkIds();
         const products = await applyProductRelations(
             Product.find({
                 is_active: true,
-                deleted_at: null
+                deleted_at: null,
+                artwork_id: { $in: allowedArtworkIds }
             })
         )
             .sort({ created_at: -1 })
@@ -27,11 +34,13 @@ const getPublicProductBySlug = async (req, res) => {
             return res.status(400).json({ error: 'Invalid slug' });
         }
 
+        const allowedArtworkIds = await storefrontArtworkIds();
         const product = await applyProductRelations(
             Product.findOne({
                 slug: String(productSlug).trim(),
                 is_active: true,
-                deleted_at: null
+                deleted_at: null,
+                artwork_id: { $in: allowedArtworkIds }
             })
         ).exec();
 
