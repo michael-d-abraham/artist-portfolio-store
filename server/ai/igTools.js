@@ -1,20 +1,28 @@
-/**
- * LangChain DynamicStructuredTools with Zod input schemas (assignment: distinct tools + schemas).
- * Invoked from LangGraph nodes — not model-driven tool-calling.
- */
+
+//  * Tools:
+//  * - fetch_preferred_copy_examples → reads preferredExamplesStore (few-shot strings).
+//  * - generate_ig_draft_from_prompt → one Ollama chat completion returning raw text (hopefully JSON).
+//  */
+// gets the user prompt all cleaned and ready
+// Than send the user prmpt and judges if its good or not
 
 const { Ollama } = require('ollama');
-const { tool } = require('@langchain/core/tools');
+const { tool, Tool } = require('@langchain/core/tools');
 const z = require('zod');
 
 const { getPreferredExamples } = require('./preferredExamplesStore');
 
+/*
+ * Ollama client: host defaults to a LAN hostname “golem” (override with OLLAMA_HOST); model via OLLAMA_MODEL.
+ */
 const ollama = new Ollama({
     host: process.env.OLLAMA_HOST || 'http://golem:11434'
 });
 const DEFAULT_MODEL = process.env.OLLAMA_MODEL || 'gpt-oss:20b';
 
-/** Schema: which slices of saved “hearted” copy to load for few-shot prompting. */
+
+// schema for the input that the tool expects for the otol call
+// Only the shape of the input is enforced here. 
 const fetchPreferredCopyExamplesSchema = z.object({
     categories: z
         .enum(['all', 'hooks', 'captions', 'ctas'])
@@ -23,6 +31,10 @@ const fetchPreferredCopyExamplesSchema = z.object({
         .describe('Return all preferred examples or only one category.')
 });
 
+
+// Tool
+// This is the tool that the 'model' (code invokes it every time) uses to get the exmples from Memory
+// lot of extra code becuase the model never calls a specific section and alway defalts to all. BUUUT its built to let the model do this. 
 const fetchPreferredCopyExamplesTool = tool(
     async (input) => {
         const { hooks, captions, ctas } = getPreferredExamples();
@@ -42,11 +54,14 @@ const fetchPreferredCopyExamplesTool = tool(
         name: 'fetch_preferred_copy_examples',
         description:
             'Loads up to five user-saved hook, caption, and CTA lines per category (FIFO) for prompt conditioning.',
+        // this is the shape of the input that the tool expects defined above
         schema: fetchPreferredCopyExamplesSchema
     }
 );
 
-/** Schema: full prompt text and sampling temperature for the local Ollama model. */
+
+// Schema input defintion
+// using zode for templ and type ect
 const generateIgDraftFromPromptSchema = z.object({
     promptText: z
         .string()
@@ -60,6 +75,17 @@ const generateIgDraftFromPromptSchema = z.object({
         .default(0.7)
         .describe('Sampling temperature for generation.')
 });
+
+// Tool
+// first it sends the user message to the model. 
+// this is what is actually asked and sent to the model.
+// Its creates the user message (all cleaned up and rady to go) and than sends it to the model. 
+
+// And than it has two Conditions on the reesponse 
+// if there a non empty string? ---> return ok and rawText
+// if there is no response? ---> return ok false and error
+
+// This is the shape of the output that the tool expects defined above
 
 const generateIgDraftFromPromptTool = tool(
     async (input) => {

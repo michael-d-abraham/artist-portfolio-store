@@ -4,6 +4,12 @@ A simple online gallery where people browse **products** (each tied to an **artw
 
 The app is a Vue website talking to a Node server, with data stored in **MongoDB**.
 
+## Wireframes
+
+![Wireframe 1](images/Screenshot%202026-04-13%20at%209.49.48%E2%80%AFAM.png)
+
+![Wireframe 2](images/Screenshot%202026-04-13%20at%209.50.18%E2%80%AFAM.png)
+
 ---
 
 ## Main “things” in the app

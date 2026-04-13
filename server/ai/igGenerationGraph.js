@@ -1,13 +1,25 @@
 /**
- * LangGraph: Instagram-ready copy from a rough artwork description.
+ * LangGraph workflow: rough artwork description → structured Instagram copy (hooks, captions, CTAs, hashtags).
  *
- * - Static edges: linear prep and tool-invocation steps.
- * - Conditional edges: route after generation (validate vs fail); route after validation (success vs retry vs fail).
- * - Two LangChain tools (Zod schemas in igTools.js): fetch preferred examples, generate draft via Ollama.
+ * HOW THE SYSTEM FITS TOGETHER (for explaining end-to-end):
+ * 1) HTTP (`server/routes/aiIg.js`) validates the body with Zod, then calls `runIgGeneration` with
+ *    userInput, personalizedVoice, tone, focus.
+ * 2) This graph runs a linear prep chain, then calls two LangChain tools from `igTools.js` (not model-chosen —
+ *    nodes invoke them in order): first load “hearted” examples from memory, then ask Ollama once for a draft.
+ * 3) The draft must be JSON matching `modelIgOutputSchema` in `schemas.js`. If parse/validation fails and the
+ *    error looks retryable, we bump a counter and call Ollama again (up to MAX_GENERATION_ATTEMPTS) with a
+ *    stricter “RETRY” note in the prompt. Transport errors or bad validation after retries end in `finalize` with error.
+ * 4) Success: `outputJson` holds the validated object for the API to return as JSON.
+ *
+ * Graph shape (edges):
+ *   START → startRequest → prepareContext → fetchExamplesTool → generateTool
+ *   → (conditional) validate OR finalize on hard generation error
+ *   validate → (conditional) finalize success OR bumpRetry OR finalize with error
+ *   bumpRetry → generateTool (loop)
+ *   finalize → END
  */
 
 const { StateGraph, START, END, Annotation } = require('@langchain/langgraph');
-
 const {
     fetchPreferredCopyExamplesTool,
     generateIgDraftFromPromptTool
@@ -16,6 +28,8 @@ const { modelIgOutputSchema } = require('./schemas');
 
 const MAX_GENERATION_ATTEMPTS = 3;
 
+
+// states 
 const IgState = Annotation.Root({
     userInput: Annotation(),
     personalizedVoice: Annotation(),
@@ -35,6 +49,11 @@ const IgState = Annotation.Root({
     error: Annotation()
 });
 
+
+/*
+ * formatExamplesList — turns a string array into numbered lines for the prompt, or a placeholder if empty
+ * so the model still sees the section and follows “personalized voice” rules.
+ */
 function formatExamplesList(label, items) {
     if (!items || !items.length) {
         return `${label}\n(none yet — follow the personalized voice and output rules.)`;
@@ -42,6 +61,10 @@ function formatExamplesList(label, items) {
     return `${label}\n${items.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
 }
 
+/*
+ * buildGenerationPrompt — composes one big user message for Ollama: role, artwork text, voice, tone, focus,
+ * preferred examples, strict JSON output rules, and on retries an extra “RETRY” block demanding valid JSON only.
+ */
 function buildGenerationPrompt(state) {
     const voice =
         (state.personalizedVoice || '').trim() ||
@@ -96,6 +119,9 @@ Do not include any keys other than hooks, captions, ctas, hashtags. No text befo
 `.trim();
 }
 
+/*
+ * extractJsonObjectText — strips common ```json fences if the model wrapped JSON in markdown anyway.
+ */
 function extractJsonObjectText(raw) {
     let s = String(raw || '').trim();
     if (!s) return s;
@@ -105,6 +131,10 @@ function extractJsonObjectText(raw) {
     return s.trim();
 }
 
+/*
+ * isRetryableValidationError — only JSON parse failures and Zod validation failures trigger a retry loop;
+ * other errors (e.g. network) skip retry and go straight to finalize.
+ */
 function isRetryableValidationError(message) {
     const m = String(message || '');
     return (
@@ -115,9 +145,12 @@ function isRetryableValidationError(message) {
 }
 
 // ---------------------------------------------------------------------------
-// Nodes
+// Nodes — each function receives partial state and returns a patch merged into state.
 // ---------------------------------------------------------------------------
 
+/*
+ * startRequestNode — seed defaults: tone/focus, clear error, attempt 0, empty outputs.
+ */
 function startRequestNode(state) {
     return {
         userInput: state.userInput,
@@ -135,6 +168,9 @@ function startRequestNode(state) {
     };
 }
 
+/*
+ * prepareContextNode — normalize whitespace on the user’s artwork description for a stable prompt.
+ */
 function prepareContextNode(state) {
     const formattedRequest = String(state.userInput || '')
         .replace(/\s+/g, ' ')
@@ -142,6 +178,10 @@ function prepareContextNode(state) {
     return { formattedRequest };
 }
 
+/*
+ * fetchExamplesToolNode — invokes fetch_preferred_copy_examples; parses JSON into three arrays.
+ * On parse failure, sets error so later nodes can short-circuit to finalize.
+ */
 async function fetchExamplesToolNode(state) {
     const raw = await fetchPreferredCopyExamplesTool.invoke({ categories: 'all' });
     let parsed;
@@ -162,6 +202,11 @@ async function fetchExamplesToolNode(state) {
     };
 }
 
+/*
+ * generateToolNode — builds the full prompt, calls generate_ig_draft_from_prompt (Ollama).
+ * If a prior error exists or description is empty, skips work or returns an error patch.
+ * Success stores rawModelText for validation.
+ */
 async function generateToolNode(state) {
     if (state.error) {
         return {};
@@ -188,6 +233,10 @@ async function generateToolNode(state) {
     }
 }
 
+/*
+ * validateOutputNode — JSON.parse + Zod safeParse; on success copies arrays into state.outputJson.
+ * On failure sets error string for routing (retry vs finalize).
+ */
 function validateOutputNode(state) {
     if (state.error) {
         return {};
@@ -225,6 +274,10 @@ function validateOutputNode(state) {
     };
 }
 
+/*
+ * bumpRetryNode — increments generationAttempt, clears last raw text and output so the next generate step is fresh;
+ * clears error so generateToolNode will run again (retry prompt text comes from generationAttempt > 0).
+ */
 function bumpRetryNode(state) {
     return {
         generationAttempt: (state.generationAttempt || 0) + 1,
@@ -234,6 +287,9 @@ function bumpRetryNode(state) {
     };
 }
 
+/*
+ * finalizeNode — last step: if any error remains, ensure outputJson is null; otherwise pass through success payload.
+ */
 function finalizeNode(state) {
     if (state.error) {
         return { outputJson: null };
@@ -242,10 +298,13 @@ function finalizeNode(state) {
 }
 
 // ---------------------------------------------------------------------------
-// Routing (conditional edges)
+// Routing — conditional edges read state and return the name of the next edge key (see addConditionalEdges).
 // ---------------------------------------------------------------------------
 
-/** After LLM tool: empty description errors skip validation; otherwise always validate when no transport error. */
+/*
+ * routeAfterGenerate — after Ollama: if tool reported error (network, empty, etc.), skip validation and end.
+ * Otherwise always run validateOutputNode next.
+ */
 function routeAfterGenerate(state) {
     if (state.error) {
         return 'finalize';
@@ -253,7 +312,11 @@ function routeAfterGenerate(state) {
     return 'validate';
 }
 
-/** After Zod/JSON check: success, bounded retry on parse/schema only, or finalize with error. */
+/*
+ * routeAfterValidate — if outputJson is set, we’re done (success path to finalize).
+ * If validation failed with a retryable message and attempts remain, go to bumpRetry → generate again.
+ * Else finalize with error stuck in state (HTTP layer returns 502).
+ */
 function routeAfterValidate(state) {
     if (state.outputJson) {
         return 'success';
@@ -270,7 +333,7 @@ function routeAfterValidate(state) {
 }
 
 // ---------------------------------------------------------------------------
-// Graph
+// Graph compilation — wires nodes and edges; .compile() returns an invokable runnable.
 // ---------------------------------------------------------------------------
 
 const igGenerationGraph = new StateGraph(IgState)
@@ -298,6 +361,10 @@ const igGenerationGraph = new StateGraph(IgState)
     .addEdge('finalize', END)
     .compile();
 
+/*
+ * runIgGeneration — public entry: pass the same fields the HTTP route parsed; returns final graph state
+ * (check error and outputJson on the result).
+ */
 async function runIgGeneration(input) {
     return igGenerationGraph.invoke(input);
 }
