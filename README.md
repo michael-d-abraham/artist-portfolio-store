@@ -1,94 +1,149 @@
-# Art shop (midterm project)
+# Art Shop — Full-stack gallery, admin & AI content assistant
 
-A simple online gallery where people browse **products** (each tied to an **artwork**). There is a **login area** for the artist to add or edit listings. An extra page helps write **Instagram-style text** (hooks, captions, etc.) using a **local AI** setup.
+Full-stack web application for an independent artist: a **public product gallery** tied to **artworks**, a **password-protected admin** area for catalog management, and a **LangGraph + Ollama assistant** for **Instagram-style copy** (hooks, captions, CTAs, hashtags).
 
-The app is a Vue website talking to a Node server, with data stored in **MongoDB**.
+*Academic project — Vue 3 + Express + MongoDB.*
+
+---
+
+## Highlights
+
+- **Public site** — Browse artworks and products by slug; product detail with imagery and metadata.
+- **Admin workspace** — Session-based authentication; CRUD for artworks, product types, products, and images; soft-delete and visibility toggles.
+- **Catalog bundle API** — Single endpoint to create a coherent listing (artwork + product + related data) in one request.
+- **AI-assisted captions** — LangGraph workflow: normalize input, inject user-“hearted” example lines (in-memory), call Ollama, **validate** structured JSON with **Zod**, retry on recoverable failures.
+
+---
+
+## Tech stack
+
+| Layer | Technologies |
+|--------|----------------|
+| Frontend | Vue 3, Vue Router, Vite |
+| Backend | Node.js, Express 5 |
+| Data | MongoDB, Mongoose |
+| Auth | express-session (cookie), salted password hashing (Node `crypto` / scrypt) |
+| AI | LangGraph, LangChain tools, Ollama client, Zod |
+
+---
+
+## Getting started
+
+**Prerequisites:** Node.js, MongoDB, and for AI features an **Ollama** runtime reachable from the server (defaults are overridable via environment variables).
+
+1. Clone the repo and install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+2. Configure environment variables (e.g. `.env`): **MongoDB connection string**, **session secret**, and optionally **`OLLAMA_HOST`** / **`OLLAMA_MODEL`** to match your machine.
+
+3. Run services:
+
+   | Command | Purpose |
+   |---------|---------|
+   | `npm run server` | API only (`server/server.js`) |
+   | `npm run dev` | Vite dev server (frontend) |
+   | `npm run dev:all` | API + frontend concurrently |
+   | `npm run build` | Production build of the Vue app |
+
+---
 
 ## Wireframes
 
-![Wireframe 1](images/Screenshot%202026-04-13%20at%209.49.48%E2%80%AFAM.png)
+Early UI exploration for the gallery and admin flows.
 
-![Wireframe 2](images/Screenshot%202026-04-13%20at%209.50.18%E2%80%AFAM.png)
+**Browse / gallery**
 
----
+![Wireframe — gallery / browse](images/Screenshot%202026-04-13%20at%209.49.48%E2%80%AFAM.png)
 
-## Main “things” in the app
+**Product detail / admin**
 
-- **Artwork** — The piece itself: name, web-friendly link name, description, year, whether it’s shown or hidden, and a “deleted” flag (delete doesn’t wipe the row; it hides it).
-- **Product type** — What kind of item it is (e.g. poster): name, description, materials, bullet features.
-- **Product** — The actual thing for sale: links to an artwork and a type, price, how many are in stock, size info, photos (via images below), and show/hide + deleted flag.
-- **Product image** — Picture URL for a product, sort order, which one is the “main” image, alt text.
-- **Admin user** — Login name and a hashed password for the back office.
-- **Saved caption lines (AI)** — Not in the database: up to a few “liked” hooks/captions/CTAs kept in server memory to steer the AI. Resets if the server restarts.
+![Wireframe — product detail / admin](images/Screenshot%202026-04-13%20at%209.50.18%E2%80%AFAM.png)
 
 ---
 
-## API routes (short list)
+## Domain model
 
-Anything under **`/api/admin/...`** (except login) needs you to **log in first** so the browser sends the session cookie.
-
-**Visitors (no login)**  
-`GET /api/artworks` — list artworks on the site.  
-`GET /api/artworks/:slug` — one artwork.  
-`GET /api/products` — list products (the gallery).  
-`GET /api/product/:slug` — one product’s detail.
-
-**Login**  
-`POST /api/admin/session/login` — body: username + password.  
-`GET /api/admin/session` — who am I (after login).  
-`POST /api/admin/session/logout` — sign out.
-
-**Admin — artworks**  
-`GET/POST /api/admin/artworks` — list or create.  
-`GET/PUT/DELETE /api/admin/artworks/:id` — read, edit, or soft-delete.  
-`PATCH /api/admin/artworks/:id/toggle-active` — show/hide.
-
-**Admin — product types**  
-`GET/POST /api/admin/product-types` — list or create.  
-`GET/PUT /api/admin/product-types/:id` — read or update.
-
-**Admin — products**  
-`GET/POST /api/admin/products` — list or create.  
-`GET/PUT /api/admin/products/:id` — read or update.  
-`GET /api/admin/products/:productId/images` — images for that product.  
-`PUT .../images/:imageId/primary` — pick the main image.  
-`PUT .../inventory` — update stock.
-
-**Admin — product images**  
-`POST /api/admin/product-images` — add an image.  
-`PUT/DELETE /api/admin/product-images/:id` — change or remove.
-
-**Admin — quick “new listing”**  
-`POST /api/admin/catalog-items` — creates the bundle your app expects in one go.
-
-**Admin — Instagram helper**  
-`POST /api/admin/ai/generate-ig` — send a rough description; get back suggested hooks, captions, CTAs, hashtags.  
-`POST /api/admin/ai/save-preferred` — save a line you liked for future suggestions.
+- **Artwork** — Title, URL slug, description, optional year, visibility, soft-delete (hidden rather than destroyed).
+- **Product type** — Category of sellable item (e.g. poster): materials, feature bullets, metadata.
+- **Product** — Sellable SKU linking one artwork to one type: price (stored in cents), inventory, size fields, images, visibility, soft-delete.
+- **Product image** — Image URL, sort order, primary flag, alt text.
+- **Admin user** — Username and password hash for back-office access.
+- **Preferred copy (AI)** — Up to five “liked” hooks, captions, and CTAs per category, stored **in server memory** to steer generation; cleared on process restart (not persisted in MongoDB).
 
 ---
 
-## What’s stored in the database (big picture)
+## API overview
+
+All routes under **`/api/admin/*`** except session login require an authenticated session (session cookie).
+
+### Public (no login)
+
+| Method | Route | Description |
+|--------|--------|-------------|
+| `GET` | `/api/artworks` | List artworks on the site |
+| `GET` | `/api/artworks/:slug` | Single artwork |
+| `GET` | `/api/products` | Product gallery |
+| `GET` | `/api/product/:slug` | Single product |
+
+### Session
+
+| Method | Route | Description |
+|--------|--------|-------------|
+| `POST` | `/api/admin/session/login` | Login (username + password) |
+| `GET` | `/api/admin/session` | Current session |
+| `POST` | `/api/admin/session/logout` | Logout |
+
+### Admin — resources
+
+| Area | Notable endpoints |
+|------|-------------------|
+| Artworks | `GET/POST /api/admin/artworks`, `GET/PUT/DELETE .../:id`, `PATCH .../:id/toggle-active` |
+| Product types | `GET/POST /api/admin/product-types`, `GET/PUT .../:id` |
+| Products | `GET/POST /api/admin/products`, `GET/PUT .../:id`, `GET .../:productId/images`, `PUT .../images/:imageId/primary`, `PUT .../inventory` |
+| Product images | `POST /api/admin/product-images`, `PUT/DELETE .../:id` |
+| Catalog bundle | `POST /api/admin/catalog-items` — create listing bundle in one shot |
+
+### Admin — Instagram helper
+
+| Method | Route | Description |
+|--------|--------|-------------|
+| `POST` | `/api/admin/ai/generate-ig` | Body: artwork description + optional voice / tone / focus; returns hooks, captions, CTAs, hashtags |
+| `POST` | `/api/admin/ai/save-preferred` | Save a “hearted” line for future prompt conditioning |
+
+---
+
+## Database (high level)
 
 ![Database schema diagram](images/databaseschema.png)
 
-All of this is spelled out in the **`server/models`** files. In words:
+Models live under **`server/models/`**. In short:
 
-- **Artworks** hold title, unique slug, description, optional year, active flag, optional deleted-at date, and auto dates for created/updated.
-- **Product types** hold name, unique slug, optional description, feature list, material, active flag, dates.
-- **Products** point to an artwork and a type; they have a unique slug, price (in cents), stock counts, optional size fields, active + deleted-at, dates. Images are linked separately.
-- **Product images** point to a product; they store the image URL, ordering, primary flag, alt text, active + deleted-at, dates.
-- **Admin users** store username, password hash, enabled flag, admin flag, dates.
-
-The Instagram endpoints also use small **request checks** in code (for example: required text, allowed tone/focus choices, and making sure the AI answer has the right number of hooks/captions/etc.).
+- **Artworks** — Title, unique slug, description, optional year, active flag, optional `deletedAt`, timestamps.
+- **Product types** — Name, unique slug, optional description, features, material, active flag, timestamps.
+- **Products** — Reference artwork + type, unique slug, price (cents), stock, optional size fields, active + `deletedAt`, timestamps; images in a separate collection.
+- **Product images** — Reference product, URL, ordering, primary flag, alt text, active + `deletedAt`, timestamps.
+- **Admin users** — Username, password hash, enabled / admin flags, timestamps.
 
 ---
 
-## How the Instagram AI flow works
+## Instagram AI pipeline
 
-You type a rough idea of the piece (and optional style notes). The server runs a **step-by-step workflow** (LangGraph): tidy the text, pull any saved “heart” examples, build a prompt, call the **local model** (Ollama), then **check** that the reply is valid JSON in the right shape. If the reply is badly formed, it **tries again** a few times. Two helper **tools** in code (with clear inputs) handle loading examples and calling the model—the workflow decides when to use them; the model does not pick its own tools.
+Administrators describe a piece in plain language (and optional stylistic constraints). The server:
 
-![Agentic workflow graph](images/AgenticGraph.png)
+1. Normalizes context and loads saved preferred examples from memory.
+2. Builds a single structured prompt and calls **Ollama** once per attempt (via LangChain tools invoked by the graph — not model-selected tool use).
+3. Parses the reply as JSON and enforces shape with **Zod** (fixed counts for hooks, captions, CTAs, hashtags).
+4. Retries up to a small cap when the failure is a recoverable parse/validation issue.
 
-You need MongoDB running, a `.env` with your DB string and session secret, and (for captions) Ollama running where the code expects it—or set host/model in the environment.
+![LangGraph workflow](images/AgenticGraph.png)
 
-**Run:** `npm run server` for the API, `npm run dev` for the website, or `npm run dev:all` for both.
+Implementation reference: **`server/ai/`** (graph, tools, Zod schemas, in-memory preferences) and **`server/routes/aiIg.js`**.
+
+---
+
+## Repository
+
+[github.com/se4200/s26-midterm-project-michael-d-abraham](https://github.com/se4200/s26-midterm-project-michael-d-abraham)

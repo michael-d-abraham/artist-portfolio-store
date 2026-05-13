@@ -1,6 +1,6 @@
 
 // This is the rag part of it. 
-// this defines the stack as a FILO stack and defines the max items. 
+// this defines the stack as a FIFO stack and defines the max items. 
 // NOT PERSISTANT STUPID. 
 // No validation here just pushes whatever. 
 
