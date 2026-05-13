@@ -50,20 +50,6 @@ Full-stack web application for an independent artist: a **public product gallery
 
 ---
 
-## Wireframes
-
-Early UI exploration for the gallery and admin flows.
-
-**Browse / gallery**
-
-![Wireframe — gallery / browse](images/Screenshot%202026-04-13%20at%209.49.48%E2%80%AFAM.png)
-
-**Product detail / admin**
-
-![Wireframe — product detail / admin](images/Screenshot%202026-04-13%20at%209.50.18%E2%80%AFAM.png)
-
----
-
 ## Domain model
 
 - **Artwork** — Title, URL slug, description, optional year, visibility, soft-delete (hidden rather than destroyed).
@@ -146,4 +132,4 @@ Implementation reference: **`server/ai/`** (graph, tools, Zod schemas, in-memory
 
 ## Repository
 
-[github.com/se4200/s26-midterm-project-michael-d-abraham](https://github.com/se4200/s26-midterm-project-michael-d-abraham)
+[github.com/michael-d-abraham/artist-portfolio-store](https://github.com/michael-d-abraham/artist-portfolio-store)

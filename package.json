@@ -1,14 +1,14 @@
 {
-  "name": "s26-midterm-project-michael-d-abraham",
+  "name": "artist-portfolio-store",
   "version": "1.0.0",
   "description": "",
-  "homepage": "https://github.com/se4200/s26-midterm-project-michael-d-abraham#readme",
+  "homepage": "https://github.com/michael-d-abraham/artist-portfolio-store#readme",
   "bugs": {
-    "url": "https://github.com/se4200/s26-midterm-project-michael-d-abraham/issues"
+    "url": "https://github.com/michael-d-abraham/artist-portfolio-store/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/se4200/s26-midterm-project-michael-d-abraham.git"
+    "url": "git+https://github.com/michael-d-abraham/artist-portfolio-store.git"
   },
   "license": "ISC",
   "author": "",
