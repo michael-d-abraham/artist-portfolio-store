@@ -5,7 +5,6 @@
 
 
 const z = require('zod');
-const { it } = require('zod/v4/locales')
 
 /*
  * Tone / focus enums — match what the Vue admin page sends so requests are predictable
@@ -17,7 +16,7 @@ const focusSchema = z.enum(['Engagement', 'Sell', 'Story', 'Awareness']);
 
 /*
  * POST /api/admin/ai/generate-ig body.
- * userInput: required artwork blurb; optional voice/tone/focus shape the system prompt in the graph.
+ * userInput: required listing blurb; optional voice/tone/focus shape the system prompt in the graph.
  */
 const generationRequestSchema = z.object({
     userInput: z.string().min(1, 'userInput is required'),

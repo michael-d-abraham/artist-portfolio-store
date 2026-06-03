@@ -1,5 +1,5 @@
 /**
- * LangGraph workflow: rough artwork description → structured Instagram copy (hooks, captions, CTAs, hashtags).
+ * LangGraph workflow: rough listing description → structured Instagram copy (hooks, captions, CTAs, hashtags).
  *
  * HOW THE SYSTEM FITS TOGETHER (for explaining end-to-end):
  * 1) HTTP (`server/routes/aiIg.js`) validates the body with Zod, then calls `runIgGeneration` with
@@ -62,7 +62,7 @@ function formatExamplesList(label, items) {
 }
 
 /*
- * buildGenerationPrompt — composes one big user message for Ollama: role, artwork text, voice, tone, focus,
+ * buildGenerationPrompt — composes one big user message for Ollama: role, listing text, voice, tone, focus,
  * preferred examples, strict JSON output rules, and on retries an extra “RETRY” block demanding valid JSON only.
  */
 function buildGenerationPrompt(state) {
@@ -85,9 +85,9 @@ function buildGenerationPrompt(state) {
 
     return `
 === SYSTEM ROLE ===
-You help a visual artist turn a rough description of their artwork into Instagram post components. Be faithful to the art described. Output must be valid JSON only — no markdown, no commentary outside the JSON object.
+You help a visual artist turn a rough description of their listing into Instagram post components. Be faithful to the art described. Output must be valid JSON only — no markdown, no commentary outside the JSON object.
 ${retryNote}
-=== USER REQUEST (artwork / piece) ===
+=== USER REQUEST (listing / piece) ===
 ${state.formattedRequest}
 
 === PERSONALIZED VOICE (style guidelines from the artist) ===
@@ -169,7 +169,7 @@ function startRequestNode(state) {
 }
 
 /*
- * prepareContextNode — normalize whitespace on the user’s artwork description for a stable prompt.
+ * prepareContextNode — normalize whitespace on the user’s listing description for a stable prompt.
  */
 function prepareContextNode(state) {
     const formattedRequest = String(state.userInput || '')

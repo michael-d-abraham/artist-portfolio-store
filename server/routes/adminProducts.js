@@ -6,19 +6,15 @@ const {
     getAdminProductById,
     createAdminProduct,
     updateAdminProduct,
-    upsertInventoryByProductId
+    softDeleteAdminProduct,
+    toggleAdminProductActive
 } = require('../controllers/adminProductController');
-const {
-    listAdminProductImagesByProduct,
-    setPrimaryAdminProductImage
-} = require('../controllers/adminProductImageController');
 
 router.get('/', listAdminProducts);
 router.post('/', createAdminProduct);
-router.get('/:productId/images', listAdminProductImagesByProduct);
-router.put('/:productId/images/:imageId/primary', setPrimaryAdminProductImage);
-router.put('/:productId/inventory', upsertInventoryByProductId);
+router.patch('/:id/toggle-active', toggleAdminProductActive);
 router.get('/:id', getAdminProductById);
 router.put('/:id', updateAdminProduct);
+router.delete('/:id', softDeleteAdminProduct);
 
 module.exports = router;

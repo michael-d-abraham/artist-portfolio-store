@@ -66,7 +66,7 @@ const generateIgDraftFromPromptSchema = z.object({
     promptText: z
         .string()
         .min(1, 'promptText is required')
-        .describe('Full user message including instructions and artwork context.'),
+        .describe('Full user message including instructions and listing context.'),
     temperature: z
         .number()
         .min(0)

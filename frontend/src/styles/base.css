@@ -1,32 +1,35 @@
-/* Design tokens + global primitives — keep layouts in components. */
+/* Minimal artist store — clean B&W editorial (inspired by bycparker.com) */
 :root {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
-  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+  --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-serif: var(--font-sans);
 
-  --color-bg: #f7f6f4;
+  --color-bg: #ffffff;
   --color-surface: #ffffff;
-  --color-text: #1c1c1c;
-  --color-text-muted: #5a5a5a;
-  --color-border: #e3e1dd;
-  --color-border-strong: #c9c6c0;
-  --color-accent: #252525;
-  --color-error: #9b1c1c;
+  --color-product-image-bg: #ffffff;
+  --color-text: #000000;
+  --color-text-muted: #555555;
+  --color-border: #e5e5e5;
+  --color-border-strong: #000000;
+  --color-accent: #000000;
+  --color-error: #000000;
 
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
   --space-lg: 1.5rem;
-  --space-xl: 2rem;
-  --space-2xl: 3rem;
+  --space-xl: 2.5rem;
+  --space-2xl: 4rem;
+  --space-3xl: 5rem;
 
-  --radius-sm: 2px;
-  --shadow-border: 0 0 0 1px rgba(0, 0, 0, 0.06);
-  --shadow-float: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --radius-sm: 0;
+  --shadow-border: none;
+  --shadow-float: none;
 
-  --max-width-page: 68rem;
+  --max-width-page: 72rem;
   --max-width-narrow: 36rem;
-  --focus-ring: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-accent);
+  --header-padding-x: 9.5rem;
+  --font-size-base: 1.0625rem;
+  --focus-ring: 0 0 0 1px var(--color-text);
 }
 
 *,
@@ -42,8 +45,10 @@ html {
 body {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.55;
+  font-size: var(--font-size-base);
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
   color: var(--color-text);
   background: var(--color-bg);
 }
@@ -52,34 +57,47 @@ body {
   min-height: 100vh;
 }
 
-/* Links */
 a {
-  color: var(--color-accent);
-  text-underline-offset: 0.15em;
+  color: var(--color-text);
+  text-underline-offset: 0.2em;
 }
 
 a:hover {
-  color: var(--color-text);
+  opacity: 0.65;
 }
 
-/* Buttons */
+.app-brand,
+.mobile-header__brand {
+  opacity: 1;
+}
+
+.app-brand:hover,
+.app-brand:active,
+.mobile-header__brand:hover,
+.mobile-header__brand:active {
+  opacity: 1;
+}
+
 button {
   font-family: inherit;
   font-size: 0.9375rem;
+  font-weight: 400;
   line-height: 1.4;
+  letter-spacing: 0.04em;
   cursor: pointer;
   margin: 0;
-  padding: 0.5rem 1rem;
+  padding: 0.65rem 1.25rem;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text);
-  box-shadow: var(--shadow-border);
+  box-shadow: none;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 button:hover:not(:disabled) {
-  border-color: var(--color-text-muted);
-  background: #faf9f7;
+  background: var(--color-surface);
+  border-color: var(--color-text);
 }
 
 button:focus-visible {
@@ -88,43 +106,51 @@ button:focus-visible {
 }
 
 button:active:not(:disabled) {
-  background: #f0eeeb;
+  opacity: 0.85;
 }
 
 button:disabled {
-  opacity: 0.55;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .btn-primary {
-  background: var(--color-accent);
+  background: var(--color-text);
   color: var(--color-surface);
-  border-color: var(--color-accent);
-  box-shadow: var(--shadow-float);
+  border-color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #3a3a3a;
-  border-color: #3a3a3a;
+  background: #333333;
+  border-color: #333333;
   color: var(--color-surface);
+  opacity: 1;
 }
 
 .btn-primary:active:not(:disabled) {
-  background: #1a1a1a;
-  border-color: #1a1a1a;
+  background: #000000;
+  opacity: 1;
 }
 
-.btn-ghost {
-  background: transparent;
-  border-color: var(--color-border-strong);
+.btn-ghost,
+.btn-outline {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-text);
   box-shadow: none;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.btn-ghost:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.03);
+.btn-ghost:hover:not(:disabled),
+.btn-outline:hover:not(:disabled) {
+  background: var(--color-text);
+  color: var(--color-surface);
+  opacity: 1;
 }
 
-/* Form controls */
 input[type='text'],
 input[type='password'],
 input[type='number'],
@@ -134,56 +160,61 @@ textarea,
 select {
   font-family: inherit;
   font-size: 1rem;
+  font-weight: 400;
   line-height: 1.45;
+  letter-spacing: 0.02em;
   width: 100%;
   max-width: 100%;
   margin: 0;
-  padding: 0.55rem 0.65rem;
+  padding: 0.65rem 0.6rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text);
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.03);
+  box-shadow: none;
 }
 
 textarea {
   resize: vertical;
-  min-height: 5rem;
+  min-height: 6rem;
 }
 
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
   outline: none;
-  border-color: var(--color-text-muted);
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.03), var(--focus-ring);
+  border-color: var(--color-text);
+  box-shadow: var(--focus-ring);
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #8a8884;
+  color: var(--color-text-muted);
 }
 
 input[type='checkbox'],
 input[type='radio'] {
   width: auto;
-  accent-color: var(--color-accent);
+  accent-color: var(--color-text);
 }
 
 label {
   cursor: pointer;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.8125rem;
 }
 
-/* Tables (admin) */
 table.table {
   width: 100%;
   border-collapse: collapse;
   margin-top: var(--space-md);
   font-size: 0.9375rem;
   background: var(--color-surface);
-  box-shadow: var(--shadow-border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+  border-radius: 0;
 }
 
 table.table th,
@@ -195,24 +226,26 @@ table.table td {
 }
 
 table.table th {
-  font-weight: 600;
-  background: #f3f2ef;
+  font-weight: 500;
+  background: var(--color-surface);
   color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.75rem;
 }
 
 table.table tbody tr:nth-child(even) {
-  background: #fbfbfa;
+  background: var(--color-surface);
 }
 
 table.table code {
-  font-size: 0.875em;
-  padding: 0.125rem 0.35rem;
-  border-radius: var(--radius-sm);
-  background: #f0eeeb;
-  border: 1px solid var(--color-border);
+  font-size: 0.8125em;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0;
+  background: transparent;
+  border: none;
 }
 
-/* Messaging */
 .error {
   color: var(--color-error);
   margin: 0;
@@ -220,43 +253,49 @@ table.table code {
 
 .field-error {
   color: var(--color-error);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   margin-top: var(--space-xs);
+  text-transform: none;
+  letter-spacing: 0.02em;
 }
 
-/* Card surface — use with component-specific layout */
 .card-surface {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-float);
+  box-shadow: none;
 }
 
 .text-muted {
   color: var(--color-text-muted);
+  font-weight: 400;
 }
 
-.page-title {
-  font-family: var(--font-serif);
-  font-size: clamp(1.65rem, 3.5vw, 2.125rem);
-  font-weight: 400;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-  margin: 0 0 var(--space-lg);
+.page-title,
+.page-hero-title {
+  font-family: var(--font-sans);
+  font-size: clamp(1.125rem, 2.5vw, 1.5rem);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  margin: 0 0 var(--space-xl);
   color: var(--color-text);
 }
 
-/* Neutral inline actions (e.g. heart on caption lines) */
 button.is-icon {
   border: none;
   background: transparent;
   box-shadow: none;
-  padding: 0.2rem;
-  line-height: 1;
+  padding: 0.25rem;
+  line-height: 0;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 button.is-icon:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.04);
+  background: transparent;
+  opacity: 0.5;
 }
 
 button.is-icon:focus-visible {

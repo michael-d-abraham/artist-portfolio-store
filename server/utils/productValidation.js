@@ -1,4 +1,4 @@
-const { isValidObjectId } = require('./artworkValidation');
+const { isValidObjectId } = require('./objectIdValidation');
 
 function isNonEmptyString(value) {
     return value != null && String(value).trim() !== '';
@@ -16,18 +16,6 @@ function validateNonNegativeInt(value, label, errors) {
     }
 }
 
-function validateOptionalNumber(value, label, allowNull, errors) {
-    if (value === undefined) {
-        return;
-    }
-    if (allowNull && (value === null || value === '')) {
-        return;
-    }
-    if (typeof value !== 'number' || Number.isNaN(value)) {
-        errors.push(`${label} must be a number`);
-    }
-}
-
 function validateOptionalStringOrNull(value, label, errors) {
     if (value === undefined) {
         return;
@@ -37,34 +25,61 @@ function validateOptionalStringOrNull(value, label, errors) {
     }
 }
 
-function validateVariantSizeFields(body, errors) {
-    validateOptionalStringOrNull(body.size_label, 'size_label', errors);
-    validateOptionalNumber(body.width, 'width', true, errors);
-    validateOptionalNumber(body.height, 'height', true, errors);
-    validateOptionalNumber(body.depth, 'depth', true, errors);
-    validateOptionalStringOrNull(body.dimension_unit, 'dimension_unit', errors);
+function validateCurrency(value, errors) {
+    if (value === undefined) {
+        return;
+    }
+    if (typeof value !== 'string' || !/^[a-z]{3}$/i.test(value.trim())) {
+        errors.push('currency must be a 3-letter ISO code (e.g. usd)');
+    }
 }
 
-/**
- * PATCH quantities (and optional is_active) on Product — same rules as former inventory PATCH.
- * @param {object} body
- * @returns {{ errors: string[] } | null}
- */
-function validateProductQuantityPatchBody(body) {
-    const errors = [];
-    if (body == null || typeof body !== 'object') {
-        return { errors: ['Request body must be a JSON object'] };
+function validateYearCreated(value, errors) {
+    if (value === undefined) {
+        return;
     }
-    if (body.quantity_total !== undefined) {
-        validateNonNegativeInt(body.quantity_total, 'quantity_total', errors);
+    if (value !== null && (typeof value !== 'number' || !Number.isInteger(value))) {
+        errors.push('year_created must be an integer or null');
+    }
+}
+
+function validateCommonProductFields(body, errors, isCreate) {
+    if (isCreate) {
+        if (!isNonEmptyString(body.title)) {
+            errors.push('title is required');
+        }
+        if (body.description == null || String(body.description).trim() === '') {
+            errors.push('description is required');
+        }
+        if (body.price_cents === undefined || body.price_cents === null) {
+            errors.push('price_cents is required');
+        }
+    } else {
+        if (body.title !== undefined && !isNonEmptyString(body.title)) {
+            errors.push('title cannot be empty');
+        }
+        if (body.description !== undefined && String(body.description).trim() === '') {
+            errors.push('description cannot be empty');
+        }
+    }
+    if (body.price_cents !== undefined && body.price_cents !== null) {
+        validatePriceCents(body.price_cents, 'price_cents', errors);
     }
     if (body.quantity_available !== undefined) {
         validateNonNegativeInt(body.quantity_available, 'quantity_available', errors);
     }
+    validateOptionalStringOrNull(body.size_label, 'size_label', errors);
+    validateOptionalStringOrNull(body.format, 'format', errors);
+    validateOptionalStringOrNull(body.stripe_product_id, 'stripe_product_id', errors);
+    validateOptionalStringOrNull(body.stripe_price_id, 'stripe_price_id', errors);
+    validateCurrency(body.currency, errors);
+    validateYearCreated(body.year_created, errors);
     if (body.is_active !== undefined && typeof body.is_active !== 'boolean') {
         errors.push('is_active must be a boolean');
     }
-    return errors.length ? { errors } : null;
+    if (body.slug !== undefined && !isNonEmptyString(body.slug)) {
+        errors.push('slug cannot be empty');
+    }
 }
 
 /**
@@ -76,26 +91,20 @@ function validateProductCreateBody(body) {
     if (body == null || typeof body !== 'object') {
         return { errors: ['Request body must be a JSON object'] };
     }
-    if (!isNonEmptyString(body.artwork_id) || !isValidObjectId(body.artwork_id)) {
-        errors.push('artwork_id is required and must be a valid ObjectId');
-    }
-    if (!isNonEmptyString(body.product_type_id) || !isValidObjectId(body.product_type_id)) {
-        errors.push('product_type_id is required and must be a valid ObjectId');
-    }
-    if (body.price_cents === undefined || body.price_cents === null) {
-        errors.push('price_cents is required');
-    } else {
-        validatePriceCents(body.price_cents, 'price_cents', errors);
-    }
-    if (body.quantity_total !== undefined) {
-        validateNonNegativeInt(body.quantity_total, 'quantity_total', errors);
-    }
-    if (body.quantity_available !== undefined) {
-        validateNonNegativeInt(body.quantity_available, 'quantity_available', errors);
-    }
-    validateVariantSizeFields(body, errors);
-    if (body.is_active !== undefined && body.is_active !== null && typeof body.is_active !== 'boolean') {
-        errors.push('is_active must be a boolean');
+    validateCommonProductFields(body, errors, true);
+    if (Array.isArray(body.images)) {
+        body.images.forEach((img, i) => {
+            if (img == null || typeof img !== 'object') {
+                errors.push(`images[${i}] must be an object`);
+                return;
+            }
+            if (!isNonEmptyString(img.image_url)) {
+                errors.push(`images[${i}].image_url is required`);
+            }
+            if (img.is_primary !== undefined && typeof img.is_primary !== 'boolean') {
+                errors.push(`images[${i}].is_primary must be a boolean`);
+            }
+        });
     }
     return errors.length ? { errors } : null;
 }
@@ -109,34 +118,11 @@ function validateProductUpdateBody(body) {
         return { errors: ['Request body must be a JSON object'] };
     }
     const errors = [];
-    if (body.artwork_id !== undefined) {
-        if (!isNonEmptyString(body.artwork_id) || !isValidObjectId(body.artwork_id)) {
-            errors.push('artwork_id must be a valid ObjectId');
-        }
-    }
-    if (body.product_type_id !== undefined) {
-        if (!isNonEmptyString(body.product_type_id) || !isValidObjectId(body.product_type_id)) {
-            errors.push('product_type_id must be a valid ObjectId');
-        }
-    }
-    if (body.price_cents !== undefined) {
-        validatePriceCents(body.price_cents, 'price_cents', errors);
-    }
-    if (body.quantity_total !== undefined) {
-        validateNonNegativeInt(body.quantity_total, 'quantity_total', errors);
-    }
-    if (body.quantity_available !== undefined) {
-        validateNonNegativeInt(body.quantity_available, 'quantity_available', errors);
-    }
-    validateVariantSizeFields(body, errors);
-    if (body.is_active !== undefined && typeof body.is_active !== 'boolean') {
-        errors.push('is_active must be a boolean');
-    }
+    validateCommonProductFields(body, errors, false);
     return errors.length ? { errors } : null;
 }
 
 module.exports = {
     validateProductCreateBody,
-    validateProductUpdateBody,
-    validateProductQuantityPatchBody
+    validateProductUpdateBody
 };

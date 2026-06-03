@@ -1,0 +1,16 @@
+/* Mobile storefront pass — max-width: 640px (phones), 390px (small phones) */
+
+@media (max-width: 640px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  html.has-fixed-mobile-header {
+    scroll-padding-top: var(--mobile-header-height, 72px);
+  }
+
+  #app {
+    overflow-x: hidden;
+  }
+}

@@ -1,0 +1,43 @@
+/**
+ * @jest-environment jsdom
+ */
+
+const { addToCart, getCart, clearCart, getCheckoutItems } = require('../frontend/src/utils/cart');
+
+describe('cart localStorage', () => {
+    beforeEach(() => {
+        localStorage.clear();
+    });
+
+    it('getCheckoutItems sends only product_id and quantity (no prices)', () => {
+        addToCart({
+            _id: '507f1f77bcf86cd799439011',
+            slug: 'test-print',
+            title: 'Test',
+            price_cents: 9999,
+            quantity_available: 5
+        });
+
+        const payload = getCheckoutItems();
+        expect(payload).toEqual([
+            {
+                product_id: '507f1f77bcf86cd799439011',
+                quantity: 1
+            }
+        ]);
+        expect(payload[0]).not.toHaveProperty('price_cents');
+        expect(payload[0]).not.toHaveProperty('unit_price_cents');
+    });
+
+    it('clearCart empties the cart after successful purchase flow', () => {
+        addToCart({
+            _id: '507f1f77bcf86cd799439012',
+            slug: 'another',
+            quantity_available: 2
+        });
+        expect(getCart()).toHaveLength(1);
+
+        clearCart();
+        expect(getCart()).toEqual([]);
+    });
+});

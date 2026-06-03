@@ -1,7 +1,27 @@
+# Environment & secrets (never commit real values)
 .env
-.env.*
+.env.local
+.env.*.local
+!.env.example
 
+# Dependencies & build output
 node_modules/
 frontend/dist/
+coverage/
 
+# OS & editor
 .DS_Store
+**/.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Test / tooling
+.nyc_output/

@@ -1,12 +1,12 @@
 <!--
-  Admin page: rough artwork description → Instagram hooks, captions, CTAs, hashtags (via /api/admin/ai).
+  Admin page: rough listing description → Instagram hooks, captions, CTAs, hashtags (via /api/admin/ai).
   Personalized voice persists in localStorage; hearts POST liked lines to /api/admin/ai/save-preferred.
 -->
 <template>
   <div class="ig-ai-page">
     <header class="top">
       <h1 class="page-title top__title">CaptionGenerator</h1>
-      <router-link to="/admin">← Back to artworks</router-link>
+      <router-link to="/admin">← Back to listings</router-link>
     </header>
 
     <section class="inputs">
@@ -32,7 +32,7 @@
         </div>
       </div>
       <div class="field">
-        <label for="desc">Rough artwork description</label>
+        <label for="desc">Rough listing description</label>
         <textarea
           id="desc"
           v-model="userInput"

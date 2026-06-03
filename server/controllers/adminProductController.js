@@ -1,13 +1,13 @@
-const crypto = require('crypto');
 const { Product } = require('../db');
-const { isValidObjectId } = require('../utils/artworkValidation');
-const { buildProductSlug } = require('../utils/buildProductSlug');
+const { isValidObjectId } = require('../utils/objectIdValidation');
+const { normalizeSlug } = require('../utils/slugify');
+const { buildUniqueProductSlug } = require('../utils/productSlug');
 const {
     validateProductCreateBody,
-    validateProductUpdateBody,
-    validateProductQuantityPatchBody
+    validateProductUpdateBody
 } = require('../utils/productValidation');
 const { applyProductRelations } = require('../utils/productPopulate');
+const { normalizeImages, createImagesForProduct } = require('../utils/productImages');
 
 function isDuplicateKeyError(err) {
     return err && err.code === 11000;
@@ -31,76 +31,68 @@ function normalizeNullableStringInput(value) {
     return t || null;
 }
 
-function optionalNumberOrNull(value) {
+function parseYearCreated(value) {
     if (value === undefined) {
-        return undefined;
+        return { ok: true, value: undefined };
     }
-    if (value === null || value === '') {
-        return null;
+    if (value === null) {
+        return { ok: true, value: null };
     }
-    const n = Number(value);
-    return Number.isNaN(n) ? null : n;
+    if (typeof value !== 'number' || !Number.isInteger(value)) {
+        return { ok: false, error: 'year_created must be an integer or null' };
+    }
+    return { ok: true, value };
 }
 
-/** Plain object for slug middle segment — only defined keys with non-null values. */
-function variantForSlugFromValues(size_label, width, height, depth, dimension_unit) {
-    const v = {};
-    if (size_label != null && String(size_label).trim()) {
-        v.size_label = String(size_label).trim();
-    }
-    if (width != null && !Number.isNaN(Number(width))) {
-        v.width = Number(width);
-    }
-    if (height != null && !Number.isNaN(Number(height))) {
-        v.height = Number(height);
-    }
-    if (depth != null && !Number.isNaN(Number(depth))) {
-        v.depth = Number(depth);
-    }
-    if (dimension_unit != null && String(dimension_unit).trim()) {
-        v.dimension_unit = String(dimension_unit).trim();
-    }
-    return Object.keys(v).length ? v : null;
-}
-
-function variantForSlugFromProductDoc(product) {
-    return variantForSlugFromValues(
-        product.size_label,
-        product.width,
-        product.height,
-        product.depth,
-        product.dimension_unit
-    );
-}
-
-function applyCreateSizeFieldsFromBody(target, body) {
-    if (body.size_label !== undefined) {
-        target.size_label = normalizeNullableStringInput(body.size_label);
-    }
-    if (body.width !== undefined) {
-        target.width = optionalNumberOrNull(body.width);
-    }
-    if (body.height !== undefined) {
-        target.height = optionalNumberOrNull(body.height);
-    }
-    if (body.depth !== undefined) {
-        target.depth = optionalNumberOrNull(body.depth);
-    }
-    if (body.dimension_unit !== undefined) {
-        target.dimension_unit = normalizeNullableStringInput(body.dimension_unit);
-    }
-}
-
-/**
- * Admin product detail with artwork, type, product_images populated.
- * @param {string} id Product _id
- * @returns {Promise<import('mongoose').Document | null>}
- */
 async function getAdminProductDetailById(id) {
     if (!isValidObjectId(id)) {
         return null;
     }
     return applyProductRelations(Product.findOne({ _id: id, deleted_at: null })).exec();
+}
+
+function applyProductFieldsFromBody(target, body, isCreate) {
+    if (body.title !== undefined) {
+        target.title = String(body.title).trim();
+    }
+    if (body.description !== undefined) {
+        target.description = String(body.description).trim();
+    }
+    if (body.price_cents !== undefined) {
+        target.price_cents = body.price_cents;
+    }
+    if (body.currency !== undefined) {
+        target.currency = String(body.currency).trim().toLowerCase();
+    }
+    if (body.quantity_available !== undefined) {
+        target.quantity_available = body.quantity_available;
+    }
+    if (body.size_label !== undefined) {
+        target.size_label = normalizeNullableStringInput(body.size_label);
+    }
+    if (body.format !== undefined) {
+        target.format = normalizeNullableStringInput(body.format);
+    }
+    if (body.stripe_product_id !== undefined) {
+        target.stripe_product_id = normalizeNullableStringInput(body.stripe_product_id);
+    }
+    if (body.stripe_price_id !== undefined) {
+        target.stripe_price_id = normalizeNullableStringInput(body.stripe_price_id);
+    }
+    if (body.is_active !== undefined) {
+        target.is_active = body.is_active;
+    }
+    if (body.year_created !== undefined) {
+        const yearParsed = parseYearCreated(body.year_created);
+        if (!yearParsed.ok) {
+            return yearParsed;
+        }
+        target.year_created = yearParsed.value;
+    }
+    if (isCreate && body.is_active === undefined) {
+        target.is_active = true;
+    }
+    return { ok: true };
 }
 
 const listAdminProducts = async (req, res) => {
@@ -134,10 +126,6 @@ const getAdminProductById = async (req, res) => {
     }
 };
 
-function stableSlugTokenFromProductId(productDoc) {
-    return `u${String(productDoc._id).replace(/[^a-f0-9]/gi, '').slice(-12)}`;
-}
-
 const createAdminProduct = async (req, res) => {
     try {
         const body = req.body;
@@ -146,41 +134,51 @@ const createAdminProduct = async (req, res) => {
             return validationErrorResponse(res, createErr);
         }
 
-        const uniqueToken = crypto.randomBytes(4).toString('hex');
-        const nl = normalizeNullableStringInput(body.size_label) ?? null;
-        const vw = optionalNumberOrNull(body.width) ?? null;
-        const vh = optionalNumberOrNull(body.height) ?? null;
-        const vd = optionalNumberOrNull(body.depth) ?? null;
-        const du = normalizeNullableStringInput(body.dimension_unit) ?? null;
-        const variant = variantForSlugFromValues(nl, vw, vh, vd, du);
-
-        const slugResult = await buildProductSlug(body.artwork_id, body.product_type_id, variant, uniqueToken);
-        if (slugResult.error) {
-            return res.status(400).json({ error: slugResult.error });
+        const yearParsed = parseYearCreated(body.year_created);
+        if (!yearParsed.ok) {
+            return res.status(400).json({ error: yearParsed.error });
         }
 
-        const productSlugTaken = await Product.exists({ slug: slugResult.slug });
-        if (productSlugTaken) {
-            return res.status(400).json({ error: 'Slug already exists' });
+        let slug;
+        if (body.slug != null && String(body.slug).trim() !== '') {
+            slug = normalizeSlug(body.slug);
+            if (!slug) {
+                return res.status(400).json({ error: 'slug is invalid' });
+            }
+            const taken = await Product.exists({ slug });
+            if (taken) {
+                return res.status(400).json({ error: 'Slug already exists' });
+            }
+        } else {
+            slug = await buildUniqueProductSlug(body.title);
+            if (!slug) {
+                return res.status(400).json({ error: 'slug could not be generated from title' });
+            }
         }
 
         const doc = {
-            artwork_id: body.artwork_id,
-            product_type_id: body.product_type_id,
-            slug: slugResult.slug,
+            title: String(body.title).trim(),
+            slug,
+            description: String(body.description).trim(),
             price_cents: body.price_cents,
-            quantity_total: body.quantity_total !== undefined ? body.quantity_total : 0,
+            currency: body.currency != null ? String(body.currency).trim().toLowerCase() : 'usd',
             quantity_available: body.quantity_available !== undefined ? body.quantity_available : 0,
-            size_label: nl,
-            width: vw,
-            height: vh,
-            depth: vd,
-            dimension_unit: du,
+            size_label: normalizeNullableStringInput(body.size_label) ?? null,
+            format: normalizeNullableStringInput(body.format) ?? null,
+            stripe_product_id: normalizeNullableStringInput(body.stripe_product_id) ?? null,
+            stripe_price_id: normalizeNullableStringInput(body.stripe_price_id) ?? null,
             is_active: body.is_active !== undefined ? body.is_active : true,
             deleted_at: null
         };
+        if (yearParsed.value !== undefined) {
+            doc.year_created = yearParsed.value;
+        }
 
         const product = await Product.create(doc);
+        const rawImages = Array.isArray(body.images) ? body.images : [];
+        if (rawImages.length) {
+            await createImagesForProduct(product._id, normalizeImages(rawImages));
+        }
 
         const populated = await getAdminProductDetailById(product._id.toString());
         res.status(201).json(populated);
@@ -211,39 +209,30 @@ const updateAdminProduct = async (req, res) => {
             return res.status(404).json({ error: 'Product not found' });
         }
 
-        const nextArtworkId = body.artwork_id !== undefined ? body.artwork_id : product.artwork_id;
-        const nextProductTypeId = body.product_type_id !== undefined ? body.product_type_id : product.product_type_id;
-
-        applyCreateSizeFieldsFromBody(product, body);
-        if (body.price_cents !== undefined) {
-            product.price_cents = body.price_cents;
-        }
-        if (body.quantity_total !== undefined) {
-            product.quantity_total = body.quantity_total;
-        }
-        if (body.quantity_available !== undefined) {
-            product.quantity_available = body.quantity_available;
-        }
-        if (body.is_active !== undefined) {
-            product.is_active = body.is_active;
-        }
-        product.artwork_id = nextArtworkId;
-        product.product_type_id = nextProductTypeId;
-
-        const token = stableSlugTokenFromProductId(product);
-        const variant = variantForSlugFromProductDoc(product);
-        const slugResult = await buildProductSlug(nextArtworkId, nextProductTypeId, variant, token);
-        if (slugResult.error) {
-            return res.status(400).json({ error: slugResult.error });
+        const fieldResult = applyProductFieldsFromBody(product, body, false);
+        if (!fieldResult.ok) {
+            return res.status(400).json({ error: fieldResult.error });
         }
 
-        if (slugResult.slug !== product.slug) {
-            const slugTaken = await Product.exists({ slug: slugResult.slug, _id: { $ne: product._id } });
-            if (slugTaken) {
-                return res.status(400).json({ error: 'Slug already exists' });
+        if (body.slug !== undefined) {
+            const nextSlug = normalizeSlug(body.slug);
+            if (!nextSlug) {
+                return res.status(400).json({ error: 'slug is invalid' });
             }
+            if (nextSlug !== product.slug) {
+                const taken = await Product.exists({ slug: nextSlug, _id: { $ne: product._id } });
+                if (taken) {
+                    return res.status(400).json({ error: 'Slug already exists' });
+                }
+                product.slug = nextSlug;
+            }
+        } else if (body.title !== undefined && String(body.title).trim() !== product.title) {
+            const nextSlug = await buildUniqueProductSlug(body.title, product._id);
+            if (!nextSlug) {
+                return res.status(400).json({ error: 'slug could not be generated from title' });
+            }
+            product.slug = nextSlug;
         }
-        product.slug = slugResult.slug;
 
         await product.save();
         const populated = await getAdminProductDetailById(product._id.toString());
@@ -257,43 +246,49 @@ const updateAdminProduct = async (req, res) => {
     }
 };
 
-/**
- * Former PUT /api/admin/products/:productId/inventory — quantities (and is_active) now live on Product.
- */
-const upsertInventoryByProductId = async (req, res) => {
+const softDeleteAdminProduct = async (req, res) => {
     try {
-        const { productId } = req.params;
-        if (!isValidObjectId(productId)) {
+        const { id } = req.params;
+        if (!isValidObjectId(id)) {
             return res.status(400).json({ error: 'Invalid product id' });
         }
 
-        const body = req.body == null ? {} : req.body;
-        const updateErr = validateProductQuantityPatchBody(body);
-        if (updateErr) {
-            return validationErrorResponse(res, updateErr);
-        }
+        const now = new Date();
+        const product = await Product.findOneAndUpdate(
+            { _id: id, deleted_at: null },
+            { deleted_at: now, is_active: false },
+            { new: true }
+        );
 
-        const product = await Product.findOne({ _id: productId, deleted_at: null });
         if (!product) {
-            return res.status(400).json({ error: 'productId does not reference an existing Product' });
+            return res.status(404).json({ error: 'Product not found' });
         }
 
-        if (body.quantity_total !== undefined) {
-            product.quantity_total = body.quantity_total;
-        }
-        if (body.quantity_available !== undefined) {
-            product.quantity_available = body.quantity_available;
-        }
-        if (body.is_active !== undefined) {
-            product.is_active = body.is_active;
-        }
-        await product.save();
-
-        const populated = await getAdminProductDetailById(productId);
-        return res.json(populated);
+        res.json(product);
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+const toggleAdminProductActive = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({ error: 'Invalid product id' });
+        }
+
+        const product = await Product.findOne({ _id: id, deleted_at: null });
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        product.is_active = !product.is_active;
+        await product.save();
+        res.json(product);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
     }
 };
 
@@ -302,6 +297,7 @@ module.exports = {
     getAdminProductById,
     createAdminProduct,
     updateAdminProduct,
-    getAdminProductDetailById,
-    upsertInventoryByProductId
+    softDeleteAdminProduct,
+    toggleAdminProductActive,
+    getAdminProductDetailById
 };

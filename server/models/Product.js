@@ -1,25 +1,17 @@
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
-    artwork_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Artwork',
-        required: true
-    },
-    product_type_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'ProductType',
-        required: true
-    },
+    title: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
+    description: { type: String, required: true, default: '' },
     price_cents: { type: Number, required: true },
-    quantity_total: { type: Number, required: true, default: 0 },
+    currency: { type: String, required: true, default: 'usd' },
     quantity_available: { type: Number, required: true, default: 0 },
     size_label: { type: String, default: null },
-    width: { type: Number, default: null },
-    height: { type: Number, default: null },
-    depth: { type: Number, default: null },
-    dimension_unit: { type: String, default: null },
+    format: { type: String, default: null },
+    year_created: { type: Number, default: null },
+    stripe_product_id: { type: String, default: null },
+    stripe_price_id: { type: String, default: null },
     is_active: { type: Boolean, required: true, default: true },
     deleted_at: { type: Date, default: null }
 }, {

@@ -2,57 +2,50 @@
   <div class="admin-create">
     <h1 class="page-title">New listing</h1>
     <p class="lead text-muted">
-      Add one artwork and one product for sale: name, description, what kind of item it is (poster, canvas, …), photos, price, and how many you have.
+      Add a product for sale: title, description, format, photos, price, and stock. Each listing is independent in the shop.
     </p>
-    <p v-if="loadTypesError" class="error">{{ loadTypesError }}</p>
 
     <form @submit.prevent="onSubmit">
       <div class="field">
-        <label for="name">Name *</label>
-        <input id="name" v-model="artwork.title" type="text" autocomplete="off" placeholder="Artwork or piece name" />
-        <p class="help">This is the title shown in the shop and on the product page.</p>
+        <label for="title">Title *</label>
+        <input id="title" v-model="form.title" type="text" autocomplete="off" placeholder="e.g. Swilly Clouds — Canvas" />
+        <p class="help">Shown in the gallery and on the product page. URL slug is generated from this unless you set one below.</p>
       </div>
 
       <div class="field">
         <label for="desc">Description *</label>
-        <textarea id="desc" v-model="artwork.description" rows="5" placeholder="Describe the artwork" />
-        <p class="help">Shown on the product page with this piece.</p>
+        <textarea id="desc" v-model="form.description" rows="5" placeholder="Describe the piece" />
       </div>
 
       <div class="field">
-        <label for="pt-select">Type *</label>
-        <select id="pt-select" v-model="selectedTypeChoice" :disabled="loadingTypes">
-          <option v-if="loadingTypes" value="">Loading types…</option>
-          <template v-else>
-            <option value="">— Pick one —</option>
-            <option value="__new__">New type…</option>
-            <option v-for="t in productTypes" :key="t._id" :value="String(t._id)">{{ t.name }}</option>
-          </template>
-        </select>
-        <p class="help">What you’re selling (e.g. Poster, Canvas print). Choose an existing one or “New type”.</p>
+        <label for="format">Format</label>
+        <input id="format" v-model="form.format" type="text" placeholder="e.g. Canvas, Poster" />
+        <p class="help">Optional — e.g. print type or medium.</p>
       </div>
 
-      <div v-if="isNewType" class="field box">
-        <label for="pt-name">New type name *</label>
-        <input id="pt-name" v-model="newTypeName" type="text" placeholder="e.g. Poster, Canvas" />
-        <p class="help">Only the name is required; this creates the type for next time too.</p>
+      <div class="field">
+        <label for="size">Size</label>
+        <input id="size" v-model="form.size_label" type="text" placeholder='e.g. 16" × 20"' />
+      </div>
+
+      <div class="field">
+        <label for="year">Year</label>
+        <input id="year" v-model.number="form.year_created" type="number" min="1900" max="2100" step="1" placeholder="Optional" />
       </div>
 
       <div class="field">
         <label for="price">Price (USD) *</label>
         <input id="price" v-model.number="priceDollars" type="number" min="0" step="0.01" />
-        <p class="help">Price in dollars (e.g. 49.99).</p>
       </div>
 
       <div class="field">
-        <label for="qty">Quantity *</label>
-        <input id="qty" v-model.number="quantity" type="number" min="0" step="1" />
-        <p class="help">How many you have in stock to start.</p>
+        <label for="qty">Quantity in stock *</label>
+        <input id="qty" v-model.number="form.quantity_available" type="number" min="0" step="1" />
       </div>
 
       <div class="field">
         <span class="label-text">Pictures</span>
-        <p class="help">Paste image URLs. Mark one as the main photo (shown first in the shop).</p>
+        <p class="help">Paste image URLs. Mark one as the main photo.</p>
         <div v-for="(img, j) in imageRows" :key="j" class="image-line">
           <input v-model="img.url" type="text" placeholder="https://…" />
           <label v-if="nonEmptyImageUrls.length" class="primary-pick">
@@ -74,32 +67,24 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted } from 'vue';
+import { reactive, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { getAdminProductTypes, createCatalogItem } from '../services/api.js';
-
-const CREATE_NEW = '__new__';
+import { createAdminProduct } from '../services/api.js';
 
 const router = useRouter();
 
-const artwork = reactive({
+const form = reactive({
   title: '',
-  description: ''
+  description: '',
+  format: '',
+  size_label: '',
+  year_created: null,
+  quantity_available: 0
 });
 
-const productTypes = ref([]);
-const loadingTypes = ref(false);
-const loadTypesError = ref('');
-const selectedTypeChoice = ref('');
-const newTypeName = ref('');
-
 const priceDollars = ref(0);
-const quantity = ref(0);
-
 const imageRows = ref([{ url: '' }]);
 const primaryImageIndex = ref(0);
-
-const isNewType = computed(() => selectedTypeChoice.value === CREATE_NEW);
 
 const nonEmptyImageUrls = computed(() =>
   imageRows.value.map((r) => String(r.url || '').trim()).filter(Boolean)
@@ -115,18 +100,6 @@ function removeImageRow(index) {
     primaryImageIndex.value = Math.max(0, imageRows.value.length - 1);
   }
 }
-
-onMounted(async () => {
-  loadingTypes.value = true;
-  loadTypesError.value = '';
-  try {
-    productTypes.value = await getAdminProductTypes();
-  } catch (e) {
-    loadTypesError.value = e.message || 'Could not load types';
-  } finally {
-    loadingTypes.value = false;
-  }
-});
 
 function dollarsToCents(d) {
   const n = Number(d);
@@ -149,40 +122,30 @@ function buildImages() {
 
 function buildBody() {
   const body = {
-    artwork: {
-      title: String(artwork.title).trim(),
-      description: String(artwork.description).trim()
-    },
-    products: [
-      {
-        price_cents: dollarsToCents(priceDollars.value),
-        quantity: quantity.value
-      }
-    ]
+    title: String(form.title).trim(),
+    description: String(form.description).trim(),
+    price_cents: dollarsToCents(priceDollars.value),
+    quantity_available: form.quantity_available,
+    currency: 'usd'
   };
-
-  if (isNewType.value) {
-    body.product_type = { name: String(newTypeName.value).trim() };
-  } else {
-    body.product_type_id = selectedTypeChoice.value;
+  const format = String(form.format || '').trim();
+  if (format) body.format = format;
+  const size = String(form.size_label || '').trim();
+  if (size) body.size_label = size;
+  if (form.year_created != null && Number.isInteger(form.year_created)) {
+    body.year_created = form.year_created;
   }
-
   const imgs = buildImages();
-  if (imgs.length) {
-    body.products[0].images = imgs;
-  }
-
+  if (imgs.length) body.images = imgs;
   return body;
 }
 
 function validate() {
-  if (!String(artwork.title).trim()) return 'Enter a name.';
-  if (!String(artwork.description).trim()) return 'Enter a description.';
-  if (!selectedTypeChoice.value) return 'Choose a type or “New type”.';
-  if (isNewType.value && !String(newTypeName.value).trim()) return 'Enter a name for the new type.';
+  if (!String(form.title).trim()) return 'Enter a title.';
+  if (!String(form.description).trim()) return 'Enter a description.';
   const cents = dollarsToCents(priceDollars.value);
   if (!Number.isInteger(cents)) return 'Enter a valid price.';
-  const q = quantity.value;
+  const q = form.quantity_available;
   if (typeof q !== 'number' || !Number.isInteger(q) || q < 0) return 'Enter a whole number for quantity.';
   return null;
 }
@@ -199,7 +162,7 @@ async function onSubmit() {
   }
   submitting.value = true;
   try {
-    await createCatalogItem(buildBody());
+    await createAdminProduct(buildBody());
     router.push('/admin');
   } catch (e) {
     submitError.value = e.message || 'Save failed';
@@ -240,13 +203,6 @@ async function onSubmit() {
   margin: var(--space-xs) 0 0;
   font-size: 0.875rem;
   color: var(--color-text-muted);
-}
-
-.box {
-  padding: var(--space-md);
-  background: #f3f2ef;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
 }
 
 .image-line {

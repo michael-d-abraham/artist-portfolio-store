@@ -1,5 +1,5 @@
 /**
- * Storefront display helpers — products (with populated artwork, type, images) are the source of truth.
+ * Storefront display helpers — Product is the source of truth for catalog display.
  */
 
 export function primaryProductImage(product) {
@@ -19,20 +19,25 @@ export function primaryProductImageUrl(product) {
     return img && img.image_url ? String(img.image_url) : null;
 }
 
-export function artworkTitleFromProduct(product) {
-    const a = product?.artwork_id;
-    if (a && typeof a === 'object' && a.title) {
-        return a.title;
+export function productTitle(product) {
+    if (product?.title) {
+        return product.title;
     }
     return product?.slug || 'Product';
 }
 
-export function productTypeName(product) {
-    const t = product?.product_type_id;
-    if (t && typeof t === 'object' && t.name) {
-        return t.name;
+export function productFormat(product) {
+    return product?.format ? String(product.format).trim() : '';
+}
+
+/** Gallery card title — title plus format when format isn’t already in the title. */
+export function displayProductName(product) {
+    const title = productTitle(product);
+    const format = productFormat(product);
+    if (format && !title.toLowerCase().includes(format.toLowerCase())) {
+        return `${title} — ${format}`;
     }
-    return '';
+    return title;
 }
 
 export function formatUsdFromCents(cents) {

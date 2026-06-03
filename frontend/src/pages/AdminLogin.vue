@@ -1,28 +1,40 @@
 <template>
   <div class="admin-login">
-    <header>
-      <h1 class="page-title">Admin sign in</h1>
-      <p class="sub text-muted">Session-based login (same-origin cookie). Storefront routes stay public.</p>
-    </header>
-    <form class="form" @submit.prevent="onSubmit">
-      <label>
-        Username
-        <input v-model.trim="username" name="username" autocomplete="username" required>
+    <h1 class="page-title">Admin sign in</h1>
+
+    <form class="admin-login__form" @submit.prevent="onSubmit">
+      <label class="admin-login__field">
+        <span class="admin-login__field-label">Username</span>
+        <input
+          v-model.trim="username"
+          class="admin-login__input"
+          name="username"
+          type="text"
+          autocomplete="username"
+          required
+        >
       </label>
-      <label>
-        Password
+
+      <label class="admin-login__field">
+        <span class="admin-login__field-label">Password</span>
         <input
           v-model="plainPassword"
+          class="admin-login__input"
           name="password"
           type="password"
           autocomplete="current-password"
           required
         >
       </label>
-      <p v-if="error" class="error">{{ error }}</p>
-      <button type="submit" class="btn-primary" :disabled="busy">{{ busy ? 'Signing in…' : 'Sign in' }}</button>
+
+      <p v-if="error" class="error admin-login__error">{{ error }}</p>
+
+      <button type="submit" class="btn-primary admin-login__submit" :disabled="busy">
+        {{ busy ? 'Signing in…' : 'Sign in' }}
+      </button>
     </form>
-    <p class="back">
+
+    <p class="admin-login__back">
       <router-link to="/">← Back to gallery</router-link>
     </p>
   </div>
@@ -65,51 +77,118 @@ async function onSubmit() {
 
 <style scoped>
 .admin-login {
+  width: 100%;
   max-width: var(--max-width-narrow);
   margin: 0 auto;
-  padding: var(--space-xl) var(--space-md);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-float);
+  padding: var(--space-lg) 0 var(--space-2xl);
+  box-sizing: border-box;
 }
 
 .admin-login .page-title {
-  margin-bottom: var(--space-sm);
+  margin: 0 0 var(--space-xl);
+  text-align: center;
 }
 
-.sub {
-  margin: 0 0 var(--space-lg);
-  font-size: 0.9375rem;
-  line-height: 1.5;
-}
-
-.form {
+.admin-login__form {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  width: 100%;
 }
 
-.form label {
+.admin-login__field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
-  font-size: 0.875rem;
-  font-weight: 600;
+  gap: var(--space-sm);
+  width: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+
+.admin-login__field-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--color-text);
 }
 
-.form button {
-  align-self: flex-start;
-  margin-top: var(--space-xs);
+.admin-login__input {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  height: 48px;
+  padding: 0 0.75rem;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
-.error {
-  font-size: 0.9rem;
+.admin-login__input:focus-visible {
+  outline: none;
+  border-color: var(--color-text);
+  box-shadow: var(--focus-ring);
 }
 
-.back {
-  margin-top: var(--space-lg);
+.admin-login__error {
+  margin: 0;
   font-size: 0.9375rem;
+}
+
+.admin-login__submit {
+  width: 100%;
+  min-height: 48px;
+  margin-top: var(--space-xs);
+  padding: 0.75rem 1.25rem;
+  box-sizing: border-box;
+}
+
+.admin-login__back {
+  margin: var(--space-xl) 0 0;
+  text-align: center;
+  font-size: 0.9375rem;
+}
+
+.admin-login__back a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+@media (min-width: 641px) {
+  .admin-login {
+    padding-top: var(--space-xl);
+  }
+
+  .admin-login__submit {
+    width: auto;
+    min-width: 12rem;
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-login {
+    max-width: 100%;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+@media (max-width: 390px) {
+  .admin-login {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }
 </style>

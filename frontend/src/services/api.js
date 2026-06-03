@@ -1,9 +1,8 @@
 /**
  * API base: same-origin `/api` (Vite dev server proxies to Express).
  *
- * Storefront: getProducts (gallery), getProductBySlug (detail)
- * Admin: getAdminArtworks, getAdminArtworkById, updateArtwork, deleteArtwork, toggleArtworkActive
- * Admin create: getAdminProductTypes, createCatalogItem
+ * Storefront: getProducts, getProductBySlug, createCheckoutSession
+ * Admin products: CRUD + toggle (images on create via images[])
  * Admin Instagram AI: generateIgContent, savePreferredExample
  */
 
@@ -48,17 +47,47 @@ async function fetchJson(url, options = {}) {
     return data;
 }
 
-/** Storefront — list products (populated artwork_id, product_type_id, product_images). */
 export function getProducts() {
     return fetchJson('/api/products');
 }
 
-/** Storefront — one product by Product.slug */
+export function getPublicSocialLinks() {
+    return fetchJson('/api/site/social-links');
+}
+
+export function getAdminSocialLinks() {
+    return fetchJson('/api/admin/site/social-links');
+}
+
+export function updateAdminSocialLinks(body) {
+    return fetchJson('/api/admin/site/social-links', {
+        method: 'PUT',
+        body
+    });
+}
+
 export function getProductBySlug(slug) {
     return fetchJson(`/api/product/${encodeURIComponent(slug)}`);
 }
 
-/** Admin session (cookie) — login, current user, logout */
+/**
+ * Stripe Checkout — send only product_id + quantity; server sets price from DB.
+ * Returns { url, sessionId } — redirect customer to url (Stripe-hosted page).
+ */
+export function createCheckoutSession(body) {
+    return fetchJson('/api/create-checkout-session', {
+        method: 'POST',
+        body
+    });
+}
+
+/** Paid Checkout Session summary from Stripe (server-side; no client prices). */
+export function getCheckoutSessionOrder(sessionId) {
+    return fetchJson(
+        `/api/orders/checkout-session/${encodeURIComponent(sessionId)}`
+    );
+}
+
 export function loginAdmin(body) {
     return fetchJson('/api/admin/session/login', {
         method: 'POST',
@@ -76,41 +105,36 @@ export function logoutAdmin() {
     });
 }
 
-export function getAdminArtworks() {
-    return fetchJson('/api/admin/artworks');
+export function getAdminProducts() {
+    return fetchJson('/api/admin/products');
 }
 
-export function getAdminArtworkById(id) {
-    return fetchJson(`/api/admin/artworks/${encodeURIComponent(id)}`);
+export function getAdminProductById(id) {
+    return fetchJson(`/api/admin/products/${encodeURIComponent(id)}`);
 }
 
-/** Catalog orchestration: artwork + product type + product rows → DB */
-export function createCatalogItem(body) {
-    return fetchJson('/api/admin/catalog-items', {
+export function createAdminProduct(body) {
+    return fetchJson('/api/admin/products', {
         method: 'POST',
         body
     });
 }
 
-export function getAdminProductTypes() {
-    return fetchJson('/api/admin/product-types');
-}
-
-export function updateArtwork(id, data) {
-    return fetchJson(`/api/admin/artworks/${encodeURIComponent(id)}`, {
+export function updateAdminProduct(id, body) {
+    return fetchJson(`/api/admin/products/${encodeURIComponent(id)}`, {
         method: 'PUT',
-        body: data
+        body
     });
 }
 
-export function deleteArtwork(id) {
-    return fetchJson(`/api/admin/artworks/${encodeURIComponent(id)}`, {
+export function deleteAdminProduct(id) {
+    return fetchJson(`/api/admin/products/${encodeURIComponent(id)}`, {
         method: 'DELETE'
     });
 }
 
-export function toggleArtworkActive(id) {
-    return fetchJson(`/api/admin/artworks/${encodeURIComponent(id)}/toggle-active`, {
+export function toggleAdminProductActive(id) {
+    return fetchJson(`/api/admin/products/${encodeURIComponent(id)}/toggle-active`, {
         method: 'PATCH'
     });
 }

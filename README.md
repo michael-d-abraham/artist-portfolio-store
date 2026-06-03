@@ -1,6 +1,6 @@
 # Art Shop — Full-stack gallery, admin & AI content assistant
 
-Full-stack web application for an independent artist: a **public product gallery** tied to **artworks**, a **password-protected admin** area for catalog management, and a **LangGraph + Ollama assistant** for **Instagram-style copy** (hooks, captions, CTAs, hashtags).
+Full-stack web application for an independent artist: a **public product gallery**, a **password-protected admin** area for listing management, and a **LangGraph + Ollama assistant** for **Instagram-style copy** (hooks, captions, CTAs, hashtags).
 
 *Academic project — Vue 3 + Express + MongoDB.*
 
@@ -8,9 +8,9 @@ Full-stack web application for an independent artist: a **public product gallery
 
 ## Highlights
 
-- **Public site** — Browse artworks and products by slug; product detail with imagery and metadata.
-- **Admin workspace** — Session-based authentication; CRUD for artworks, product types, products, and images; soft-delete and visibility toggles.
-- **Catalog bundle API** — Single endpoint to create a coherent listing (artwork + product + related data) in one request.
+- **Public site** — Browse products by slug; product detail with title, description, images, price, and stock.
+- **Admin workspace** — Session-based authentication; product CRUD (images on create); soft-delete and visibility toggles.
+- **Stripe-ready catalog** — Products store `stripe_product_id` / `stripe_price_id` and `currency` for a future Checkout integration (prices always loaded from the database server-side).
 - **AI-assisted captions** — LangGraph workflow: normalize input, inject user-“hearted” example lines (in-memory), call Ollama, **validate** structured JSON with **Zod**, retry on recoverable failures.
 
 ---
@@ -37,9 +37,17 @@ Full-stack web application for an independent artist: a **public product gallery
    npm install
    ```
 
-2. Configure environment variables (e.g. `.env`): **MongoDB connection string**, **session secret**, and optionally **`OLLAMA_HOST`** / **`OLLAMA_MODEL`** to match your machine.
+2. Configure environment variables (e.g. `.env`): **MongoDB connection string**, **session secret**, **`STRIPE_SECRET_KEY`**, **`STRIPE_WEBHOOK_SECRET`**, **`CLIENT_URL`** (e.g. `http://localhost:5173`), and optionally **`OLLAMA_HOST`** / **`OLLAMA_MODEL`**.
 
-3. Run services:
+   For local Stripe webhooks: `stripe listen --forward-to localhost:3000/api/webhooks/stripe` and use the printed signing secret as `STRIPE_WEBHOOK_SECRET`.
+
+3. If upgrading from the old artwork/product-type schema, run the one-time migration:
+
+   ```bash
+   node server/scripts/migrate-to-simple-catalog.js
+   ```
+
+4. Run services:
 
    | Command | Purpose |
    |---------|---------|
@@ -52,12 +60,12 @@ Full-stack web application for an independent artist: a **public product gallery
 
 ## Domain model
 
-- **Artwork** — Title, URL slug, description, optional year, visibility, soft-delete (hidden rather than destroyed).
-- **Product type** — Category of sellable item (e.g. poster): materials, feature bullets, metadata.
-- **Product** — Sellable SKU linking one artwork to one type: price (stored in cents), inventory, size fields, images, visibility, soft-delete.
+- **Product** — Sellable listing: title, slug, description, price (cents), currency, inventory, optional format/size/year, Stripe IDs, visibility, soft-delete.
 - **Product image** — Image URL, sort order, primary flag, alt text.
+- **Order** — Checkout/payment record (customer, Stripe session/intent IDs, status, totals, addresses).
+- **Order item** — Snapshot of purchased line (title, slug, image, size, unit price, quantity, line total).
 - **Admin user** — Username and password hash for back-office access.
-- **Preferred copy (AI)** — Up to five “liked” hooks, captions, and CTAs per category, stored **in server memory** to steer generation; cleared on process restart (not persisted in MongoDB).
+- **Preferred copy (AI)** — Up to five “liked” hooks, captions, and CTAs per category, stored **in server memory**; cleared on server restart.
 
 ---
 
@@ -69,10 +77,10 @@ All routes under **`/api/admin/*`** except session login require an authenticate
 
 | Method | Route | Description |
 |--------|--------|-------------|
-| `GET` | `/api/artworks` | List artworks on the site |
-| `GET` | `/api/artworks/:slug` | Single artwork |
-| `GET` | `/api/products` | Product gallery |
-| `GET` | `/api/product/:slug` | Single product |
+| `GET` | `/api/products` | Product gallery (active, not deleted) |
+| `GET` | `/api/product/:slug` | Single product with images |
+| `POST` | `/api/checkout/create-session` | Create Stripe Checkout Session (body: `items[]` with `product_id`, `quantity` only) |
+| `POST` | `/api/webhooks/stripe` | Stripe webhook (raw body; `checkout.session.completed`) |
 
 ### Session
 
@@ -82,36 +90,67 @@ All routes under **`/api/admin/*`** except session login require an authenticate
 | `GET` | `/api/admin/session` | Current session |
 | `POST` | `/api/admin/session/logout` | Logout |
 
-### Admin — resources
+### Admin — products
 
-| Area | Notable endpoints |
-|------|-------------------|
-| Artworks | `GET/POST /api/admin/artworks`, `GET/PUT/DELETE .../:id`, `PATCH .../:id/toggle-active` |
-| Product types | `GET/POST /api/admin/product-types`, `GET/PUT .../:id` |
-| Products | `GET/POST /api/admin/products`, `GET/PUT .../:id`, `GET .../:productId/images`, `PUT .../images/:imageId/primary`, `PUT .../inventory` |
-| Product images | `POST /api/admin/product-images`, `PUT/DELETE .../:id` |
-| Catalog bundle | `POST /api/admin/catalog-items` — create listing bundle in one shot |
+| Method | Route | Description |
+|--------|--------|-------------|
+| `GET` | `/api/admin/products` | List products |
+| `POST` | `/api/admin/products` | Create product (optional `images[]`) |
+| `GET` | `/api/admin/products/:id` | Product detail |
+| `PUT` | `/api/admin/products/:id` | Update product |
+| `DELETE` | `/api/admin/products/:id` | Soft-delete product |
+| `PATCH` | `/api/admin/products/:id/toggle-active` | Toggle visibility |
+
+Product images are added at create time via `images[]` on `POST /api/admin/products` (no separate image admin API yet).
+
+### Checkout (Stripe)
+
+`POST /api/checkout/create-session` accepts:
+
+```json
+{ "items": [{ "product_id": "<ObjectId>", "quantity": 1 }] }
+```
+
+The server loads each product from MongoDB, validates active/not-deleted/stock, builds Stripe `line_items` from **database** `price_cents`, title, and image, and returns `{ "url": "<stripe checkout url>", "sessionId": "cs_..." }`.
+
+On `checkout.session.completed`, the webhook creates an **Order** and **OrderItem** snapshots, decrements `quantity_available`, and is **idempotent** per `stripe_checkout_session_id`.
+
+**Stripe Checkout flow (matches [Stripe’s guide](https://docs.stripe.com/checkout/quickstart)):**
+
+1. Customer reviews order at `/checkout` (preview only — prices loaded from API for display).
+2. Clicks **Checkout** → `POST /api/create-checkout-session` with `{ items: [{ product_id, quantity }] }` only.
+3. Server creates a Session (`mode: payment`, `price_data` or `stripe_price_id` from DB) and returns `{ url }`.
+4. Browser redirects to Stripe-hosted Checkout (`window.location.href = url`).
+5. After payment, Stripe redirects to `/order-success?session_id=…`; the page loads order details from `GET /api/orders/checkout-session/:sessionId` (Stripe as source of truth). Cancel goes to `/checkout/cancel`.
+
+Test card: `4242 4242 4242 4242`.
+
+**Order success troubleshooting**
+
+1. After payment, the browser URL must be `/order-success?session_id=cs_test_...` (not bare `/order-success`, not literal `{CHECKOUT_SESSION_ID}`).
+2. `CLIENT_URL` in `.env` must match the Vite URL in your terminal (e.g. `http://localhost:5174` if port 5173 is in use). Restart the server after changing it.
+3. On checkout, the server logs `[checkout] success_url:` in dev — confirm it ends with `session_id={CHECKOUT_SESSION_ID}`.
+4. DevTools on `/order-success` should log `sessionId from URL: cs_test_...`.
+5. Test the API directly: `curl http://localhost:3000/api/orders/checkout-session/cs_test_YOUR_ID`.
 
 ### Admin — Instagram helper
 
 | Method | Route | Description |
 |--------|--------|-------------|
-| `POST` | `/api/admin/ai/generate-ig` | Body: artwork description + optional voice / tone / focus; returns hooks, captions, CTAs, hashtags |
+| `POST` | `/api/admin/ai/generate-ig` | Body: product/listing description + optional voice / tone / focus |
 | `POST` | `/api/admin/ai/save-preferred` | Save a “hearted” line for future prompt conditioning |
 
 ---
 
 ## Database (high level)
 
-![Database schema diagram](images/databaseschema.png)
+Models live under **`server/models/`**:
 
-Models live under **`server/models/`**. In short:
-
-- **Artworks** — Title, unique slug, description, optional year, active flag, optional `deletedAt`, timestamps.
-- **Product types** — Name, unique slug, optional description, features, material, active flag, timestamps.
-- **Products** — Reference artwork + type, unique slug, price (cents), stock, optional size fields, active + `deletedAt`, timestamps; images in a separate collection.
-- **Product images** — Reference product, URL, ordering, primary flag, alt text, active + `deletedAt`, timestamps.
-- **Admin users** — Username, password hash, enabled / admin flags, timestamps.
+- **products** — Title, unique slug, description, `price_cents`, `currency`, `quantity_available`, optional `format`, `size_label`, `year_created`, `stripe_product_id`, `stripe_price_id`, `is_active`, `deleted_at`, timestamps.
+- **product_images** — Reference product, URL, ordering, primary flag, alt text, soft-delete.
+- **orders** — Customer, Stripe IDs, status enums, cent totals, address subdocs.
+- **order_items** — Order reference, optional product reference, snapshot fields for fulfillment.
+- **adminusers** — Admin credentials.
 
 ---
 
@@ -120,13 +159,11 @@ Models live under **`server/models/`**. In short:
 Administrators describe a piece in plain language (and optional stylistic constraints). The server:
 
 1. Normalizes context and loads saved preferred examples from memory.
-2. Builds a single structured prompt and calls **Ollama** once per attempt (via LangChain tools invoked by the graph — not model-selected tool use).
-3. Parses the reply as JSON and enforces shape with **Zod** (fixed counts for hooks, captions, CTAs, hashtags).
+2. Builds a single structured prompt and calls **Ollama** once per attempt.
+3. Parses the reply as JSON and enforces shape with **Zod**.
 4. Retries up to a small cap when the failure is a recoverable parse/validation issue.
 
-![LangGraph workflow](images/AgenticGraph.png)
-
-Implementation reference: **`server/ai/`** (graph, tools, Zod schemas, in-memory preferences) and **`server/routes/aiIg.js`**.
+Implementation: **`server/ai/`** and **`server/routes/aiIg.js`**.
 
 ---
 
