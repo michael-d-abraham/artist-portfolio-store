@@ -37,6 +37,14 @@
         <input id="qty" v-model.number="form.quantity_available" type="number" min="0" step="1" />
       </div>
       <div class="field">
+        <span class="label-text">Pictures</span>
+        <AdminProductImages
+          v-model="imageRows"
+          v-model:primary-index="primaryImageIndex"
+          :disabled="submitting"
+        />
+      </div>
+      <div class="field">
         <label>
           <input v-model="form.is_active" type="checkbox" />
           Active (visible in shop when in stock)
@@ -56,6 +64,7 @@
 import { reactive, ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getAdminProductById, updateAdminProduct } from '../services/api.js';
+import AdminProductImages, { buildProductImagesPayload } from '../components/admin/AdminProductImages.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -81,6 +90,8 @@ const form = reactive({
 
 const priceDollars = ref(0);
 const slugHint = ref('');
+const imageRows = ref([]);
+const primaryImageIndex = ref(0);
 
 const fieldErrors = reactive({
   title: '',
@@ -135,6 +146,7 @@ function buildUpdateBody() {
   } else {
     body.year_created = null;
   }
+  body.images = buildProductImagesPayload(imageRows.value, primaryImageIndex.value);
   return body;
 }
 
@@ -148,6 +160,13 @@ function populateFromProduct(p) {
   form.is_active = !!p.is_active;
   priceDollars.value = p.price_cents != null ? p.price_cents / 100 : 0;
   slugHint.value = p.slug ?? '';
+  const imgs = Array.isArray(p.product_images) ? p.product_images : [];
+  imageRows.value = imgs.map((img) => ({
+    id: img._id,
+    url: img.image_url
+  }));
+  const primaryIdx = imgs.findIndex((img) => img.is_primary);
+  primaryImageIndex.value = primaryIdx >= 0 ? primaryIdx : 0;
 }
 
 async function loadProduct() {
@@ -217,7 +236,8 @@ async function onSubmit() {
   margin-bottom: var(--space-lg);
 }
 
-.field label {
+.field label,
+.label-text {
   display: block;
   margin-bottom: var(--space-xs);
   font-weight: 600;

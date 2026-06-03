@@ -11,6 +11,7 @@ const { listRouter, detailRouter } = require('./routes/catalog');
 const aiIgRoutes = require('./routes/aiIg');
 const siteRoutes = require('./routes/site');
 const adminSiteSettingsRoutes = require('./routes/adminSiteSettings');
+const adminUploadRoutes = require('./routes/adminUpload');
 const { attachAdminUser, requireAdminRole } = require('./middleware/adminAuth');
 
 function createApp() {
@@ -41,6 +42,7 @@ function createApp() {
     const requireAdmin = [attachAdminUser, requireAdminRole];
 
     app.use('/api/admin/session', adminSessionRoutes);
+    app.use('/api/admin', ...requireAdmin, adminUploadRoutes);
     app.use('/api/admin/products', ...requireAdmin, adminProductRoutes);
     app.use('/api/admin/site', ...requireAdmin, adminSiteSettingsRoutes);
     app.use('/api/site', siteRoutes);

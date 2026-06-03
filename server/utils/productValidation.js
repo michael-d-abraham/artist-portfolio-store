@@ -43,6 +43,25 @@ function validateYearCreated(value, errors) {
     }
 }
 
+function validateProductImagesArray(images, errors) {
+    if (!Array.isArray(images)) {
+        errors.push('images must be an array');
+        return;
+    }
+    images.forEach((img, i) => {
+        if (img == null || typeof img !== 'object') {
+            errors.push(`images[${i}] must be an object`);
+            return;
+        }
+        if (!isNonEmptyString(img.image_url)) {
+            errors.push(`images[${i}].image_url is required`);
+        }
+        if (img.is_primary !== undefined && typeof img.is_primary !== 'boolean') {
+            errors.push(`images[${i}].is_primary must be a boolean`);
+        }
+    });
+}
+
 function validateCommonProductFields(body, errors, isCreate) {
     if (isCreate) {
         if (!isNonEmptyString(body.title)) {
@@ -92,19 +111,8 @@ function validateProductCreateBody(body) {
         return { errors: ['Request body must be a JSON object'] };
     }
     validateCommonProductFields(body, errors, true);
-    if (Array.isArray(body.images)) {
-        body.images.forEach((img, i) => {
-            if (img == null || typeof img !== 'object') {
-                errors.push(`images[${i}] must be an object`);
-                return;
-            }
-            if (!isNonEmptyString(img.image_url)) {
-                errors.push(`images[${i}].image_url is required`);
-            }
-            if (img.is_primary !== undefined && typeof img.is_primary !== 'boolean') {
-                errors.push(`images[${i}].is_primary must be a boolean`);
-            }
-        });
+    if (body.images !== undefined) {
+        validateProductImagesArray(body.images, errors);
     }
     return errors.length ? { errors } : null;
 }
@@ -119,6 +127,9 @@ function validateProductUpdateBody(body) {
     }
     const errors = [];
     validateCommonProductFields(body, errors, false);
+    if (body.images !== undefined) {
+        validateProductImagesArray(body.images, errors);
+    }
     return errors.length ? { errors } : null;
 }
 

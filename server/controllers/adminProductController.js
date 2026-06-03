@@ -7,7 +7,7 @@ const {
     validateProductUpdateBody
 } = require('../utils/productValidation');
 const { applyProductRelations } = require('../utils/productPopulate');
-const { normalizeImages, createImagesForProduct } = require('../utils/productImages');
+const { normalizeImages, createImagesForProduct, syncImagesForProduct } = require('../utils/productImages');
 
 function isDuplicateKeyError(err) {
     return err && err.code === 11000;
@@ -235,6 +235,11 @@ const updateAdminProduct = async (req, res) => {
         }
 
         await product.save();
+
+        if (body.images !== undefined) {
+            await syncImagesForProduct(product._id, body.images);
+        }
+
         const populated = await getAdminProductDetailById(product._id.toString());
         res.json(populated);
     } catch (err) {

@@ -139,6 +139,16 @@ export function toggleAdminProductActive(id) {
     });
 }
 
+/** Upload a product image to R2 (admin session required). Returns { image_url }. */
+export function uploadAdminImage(file) {
+    const formData = new FormData();
+    formData.append('image', file);
+    return fetchJson('/api/admin/upload-image', {
+        method: 'POST',
+        body: formData
+    });
+}
+
 export function generateIgContent(body) {
     return fetchJson('/api/admin/ai/generate-ig', {
         method: 'POST',

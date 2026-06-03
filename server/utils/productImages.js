@@ -59,7 +59,22 @@ async function createImagesForProduct(productId, images, session = null) {
     return created;
 }
 
+async function syncImagesForProduct(productId, rawImages, session = null) {
+    const images = Array.isArray(rawImages) ? normalizeImages(rawImages) : [];
+    let softDelete = ProductImage.updateMany(
+        { product_id: productId, deleted_at: null },
+        { $set: { deleted_at: new Date() } }
+    );
+    if (session) softDelete = softDelete.session(session);
+    await softDelete;
+    if (images.length) {
+        await createImagesForProduct(productId, images, session);
+    }
+    return images;
+}
+
 module.exports = {
     normalizeImages,
-    createImagesForProduct
+    createImagesForProduct,
+    syncImagesForProduct
 };

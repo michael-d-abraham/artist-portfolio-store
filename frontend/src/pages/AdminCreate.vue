@@ -45,16 +45,11 @@
 
       <div class="field">
         <span class="label-text">Pictures</span>
-        <p class="help">Paste image URLs. Mark one as the main photo.</p>
-        <div v-for="(img, j) in imageRows" :key="j" class="image-line">
-          <input v-model="img.url" type="text" placeholder="https://…" />
-          <label v-if="nonEmptyImageUrls.length" class="primary-pick">
-            <input v-model="primaryImageIndex" type="radio" name="primary-img" :value="j" />
-            Main
-          </label>
-          <button v-if="imageRows.length > 1" type="button" @click="removeImageRow(j)">Remove</button>
-        </div>
-        <button type="button" class="btn-add" @click="addImageRow">Add another image</button>
+        <AdminProductImages
+          v-model="imageRows"
+          v-model:primary-index="primaryImageIndex"
+          :disabled="submitting"
+        />
       </div>
 
       <p v-if="submitError" class="error">{{ submitError }}</p>
@@ -67,9 +62,10 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue';
+import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { createAdminProduct } from '../services/api.js';
+import AdminProductImages, { buildProductImagesPayload } from '../components/admin/AdminProductImages.vue';
 
 const router = useRouter();
 
@@ -83,23 +79,8 @@ const form = reactive({
 });
 
 const priceDollars = ref(0);
-const imageRows = ref([{ url: '' }]);
+const imageRows = ref([]);
 const primaryImageIndex = ref(0);
-
-const nonEmptyImageUrls = computed(() =>
-  imageRows.value.map((r) => String(r.url || '').trim()).filter(Boolean)
-);
-
-function addImageRow() {
-  imageRows.value.push({ url: '' });
-}
-
-function removeImageRow(index) {
-  imageRows.value.splice(index, 1);
-  if (primaryImageIndex.value >= imageRows.value.length) {
-    primaryImageIndex.value = Math.max(0, imageRows.value.length - 1);
-  }
-}
 
 function dollarsToCents(d) {
   const n = Number(d);
@@ -108,16 +89,7 @@ function dollarsToCents(d) {
 }
 
 function buildImages() {
-  const withIdx = imageRows.value
-    .map((r, i) => ({ url: String(r.url || '').trim(), i }))
-    .filter((x) => x.url);
-  if (!withIdx.length) return [];
-  let primaryPos = withIdx.findIndex((x) => x.i === primaryImageIndex.value);
-  if (primaryPos < 0) primaryPos = 0;
-  return withIdx.map((xr, j) => ({
-    image_url: xr.url,
-    is_primary: j === primaryPos
-  }));
+  return buildProductImagesPayload(imageRows.value, primaryImageIndex.value);
 }
 
 function buildBody() {
@@ -203,29 +175,6 @@ async function onSubmit() {
   margin: var(--space-xs) 0 0;
   font-size: 0.875rem;
   color: var(--color-text-muted);
-}
-
-.image-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-sm);
-}
-
-.image-line input[type='text'] {
-  flex: 1;
-  min-width: 12rem;
-}
-
-.primary-pick {
-  font-weight: normal;
-  white-space: nowrap;
-  font-size: 0.875rem;
-}
-
-.btn-add {
-  margin-top: var(--space-sm);
 }
 
 .actions {

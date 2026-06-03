@@ -9,7 +9,7 @@ Full-stack web application for an independent artist: a **public product gallery
 ## Highlights
 
 - **Public site** — Browse products by slug; product detail with title, description, images, price, and stock.
-- **Admin workspace** — Session-based authentication; product CRUD (images on create); soft-delete and visibility toggles.
+- **Admin workspace** — Session-based authentication; product CRUD with R2 image upload (create & edit); soft-delete and visibility toggles.
 - **Stripe-ready catalog** — Products store `stripe_product_id` / `stripe_price_id` and `currency` for a future Checkout integration (prices always loaded from the database server-side).
 - **AI-assisted captions** — LangGraph workflow: normalize input, inject user-“hearted” example lines (in-memory), call Ollama, **validate** structured JSON with **Zod**, retry on recoverable failures.
 
@@ -37,7 +37,7 @@ Full-stack web application for an independent artist: a **public product gallery
    npm install
    ```
 
-2. Configure environment variables (e.g. `.env`): **MongoDB connection string**, **session secret**, **`STRIPE_SECRET_KEY`**, **`STRIPE_WEBHOOK_SECRET`**, **`CLIENT_URL`** (e.g. `http://localhost:5173`), and optionally **`OLLAMA_HOST`** / **`OLLAMA_MODEL`**.
+2. Configure environment variables (e.g. `.env`): **MongoDB connection string**, **session secret**, **`STRIPE_SECRET_KEY`**, **`STRIPE_WEBHOOK_SECRET`**, **`CLIENT_URL`** (e.g. `http://localhost:5173`), **Cloudflare R2** (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_ENDPOINT`, `R2_PUBLIC_URL`) for admin image uploads, and optionally **`OLLAMA_HOST`** / **`OLLAMA_MODEL`**.
 
    For local Stripe webhooks: `stripe listen --forward-to localhost:3000/api/webhooks/stripe` and use the printed signing secret as `STRIPE_WEBHOOK_SECRET`.
 
@@ -97,11 +97,12 @@ All routes under **`/api/admin/*`** except session login require an authenticate
 | `GET` | `/api/admin/products` | List products |
 | `POST` | `/api/admin/products` | Create product (optional `images[]`) |
 | `GET` | `/api/admin/products/:id` | Product detail |
-| `PUT` | `/api/admin/products/:id` | Update product |
+| `PUT` | `/api/admin/products/:id` | Update product (optional `images[]` replaces all images) |
 | `DELETE` | `/api/admin/products/:id` | Soft-delete product |
 | `PATCH` | `/api/admin/products/:id/toggle-active` | Toggle visibility |
+| `POST` | `/api/admin/upload-image` | Multipart upload (`image` field) → R2; returns `{ image_url }` |
 
-Product images are added at create time via `images[]` on `POST /api/admin/products` (no separate image admin API yet).
+Admin listing photos are uploaded to **Cloudflare R2** (`products/{uuid}.ext`), then persisted as `product_images.image_url` via `images[]` on create (`POST`) or full replace on update (`PUT`). Requires all `R2_*` env vars; the bucket (or custom domain behind `R2_PUBLIC_URL`) must serve objects publicly.
 
 ### Checkout (Stripe)
 
