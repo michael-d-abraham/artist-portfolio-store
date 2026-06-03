@@ -1,5 +1,6 @@
 const { getStripe } = require('../utils/stripeClient');
 const { normalizeCheckoutSessionId } = require('../utils/stripeSessionId');
+const { sendPaidTransactionNotification } = require('./orderNotificationEmailService');
 
 function formatAddress(address) {
     if (!address || typeof address !== 'object') {
@@ -123,6 +124,8 @@ async function getCheckoutSessionSummary(sessionId) {
         });
         lineItemsData = listed.data;
     }
+
+    sendPaidTransactionNotification(id).catch(() => {});
 
     return {
         ok: true,

@@ -2,22 +2,36 @@
   <div class="contact">
     <h1 class="page-hero-title">Contact</h1>
     <div v-if="submitted" class="contact-success" role="status">
-      <p>Thanks for submitting!</p>
+      <p class="contact-success__message">{{ successMessage }}</p>
+      <router-link to="/" class="btn-primary contact-success__back">Back to gallery</router-link>
     </div>
 
     <div v-else class="contact-layout">
-      <div class="contact-hero" aria-hidden="true">
-        <span class="contact-hero__caption">Artist portrait — placeholder</span>
+      <div class="contact-hero">
+        <img
+          v-if="heroImageUrl"
+          class="contact-hero__img"
+          :src="heroImageUrl"
+          alt="Artist portrait"
+        />
+        <span v-else class="contact-hero__caption">Artist portrait — placeholder</span>
       </div>
 
-      <form class="form contact-form" @submit.prevent="onSubmit">
+      <form class="form contact-form" @submit.prevent="onSubmit" autocomplete="on">
         <label>
           Name
           <input v-model.trim="name" name="name" type="text" autocomplete="name" required>
         </label>
-        <label>
-          Email
-          <input v-model.trim="email" name="email" type="email" autocomplete="email" required>
+        <label for="contact-visitor-email">
+          Your email
+          <input
+            id="contact-visitor-email"
+            v-model.trim="email"
+            name="visitor_email"
+            type="email"
+            autocomplete="email"
+            required
+          >
         </label>
         <label>
           Subject
@@ -27,6 +41,7 @@
           Message
           <textarea v-model.trim="message" name="message" rows="6" required></textarea>
         </label>
+        <p v-if="submitError" class="error contact-form__error">{{ submitError }}</p>
         <button type="submit" class="btn-primary" :disabled="busy">
           {{ busy ? 'Submitting…' : 'Submit' }}
         </button>
@@ -36,7 +51,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { getPublicContactHero, submitContactForm } from '../services/api.js';
+
+const heroImageUrl = ref('');
 
 const name = ref('');
 const email = ref('');
@@ -44,12 +62,53 @@ const subject = ref('');
 const message = ref('');
 const submitted = ref(false);
 const busy = ref(false);
+const submitError = ref('');
+const successMessage = ref('Message sent successfully.');
 
-function onSubmit() {
-  busy.value = true;
-  submitted.value = true;
-  busy.value = false;
+function validateForm() {
+  if (!String(name.value).trim()) return 'Name is required.';
+  if (!String(email.value).trim()) return 'Email is required.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email.value).trim())) {
+    return 'Enter a valid email address.';
+  }
+  if (!String(subject.value).trim()) return 'Subject is required.';
+  if (!String(message.value).trim()) return 'Message is required.';
+  return null;
 }
+
+async function onSubmit() {
+  submitError.value = '';
+  const validationError = validateForm();
+  if (validationError) {
+    submitError.value = validationError;
+    return;
+  }
+
+  busy.value = true;
+  try {
+    const result = await submitContactForm({
+      name: name.value,
+      email: email.value,
+      subject: subject.value,
+      message: message.value
+    });
+    successMessage.value = result.message || 'Message sent successfully.';
+    submitted.value = true;
+  } catch (e) {
+    submitError.value = e.message || 'Unable to send message.';
+  } finally {
+    busy.value = false;
+  }
+}
+
+onMounted(async () => {
+  try {
+    const data = await getPublicContactHero();
+    heroImageUrl.value = data?.image_url ? String(data.image_url) : '';
+  } catch {
+    heroImageUrl.value = '';
+  }
+});
 </script>
 
 <style scoped>
@@ -77,6 +136,19 @@ function onSubmit() {
   align-items: flex-end;
   justify-content: center;
   padding: var(--space-md);
+  overflow: hidden;
+}
+
+.contact-hero__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.contact-hero:has(.contact-hero__img) {
+  padding: 0;
+  align-items: stretch;
 }
 
 .contact-hero__caption {
@@ -115,19 +187,33 @@ function onSubmit() {
   margin-top: var(--space-xs);
 }
 
-.contact-success {
-  max-width: var(--max-width-narrow);
-  padding: var(--space-xl) 0;
-  border-top: 1px solid var(--color-border);
+.contact-form__error {
+  margin: 0;
 }
 
-.contact-success p {
-  margin: 0;
+.contact-success {
+  max-width: var(--max-width-narrow);
+  margin: 0 auto;
+  padding: var(--space-2xl) 0 var(--space-xl);
+  text-align: center;
+}
+
+.contact-success__message {
+  margin: 0 0 var(--space-xl);
   font-size: 0.875rem;
   font-weight: 300;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  text-align: center;
+}
+
+.contact-success__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 12rem;
+  padding: 0.65rem 1.5rem;
+  text-decoration: none;
 }
 
 @media (min-width: 48rem) {
@@ -153,10 +239,19 @@ function onSubmit() {
     padding-bottom: var(--space-lg);
   }
 
+  .page-hero-title {
+    margin-bottom: var(--space-md);
+  }
+
   .form button {
     width: 100%;
     align-self: stretch;
     min-height: 48px;
+  }
+
+  .contact-success__back {
+    width: 100%;
+    min-width: 0;
   }
 }
 </style>

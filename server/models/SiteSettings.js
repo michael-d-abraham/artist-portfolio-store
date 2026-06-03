@@ -16,7 +16,9 @@ const siteSettingsSchema = new mongoose.Schema(
             instagram: { type: socialLinkSchema, default: () => ({}) },
             tiktok: { type: socialLinkSchema, default: () => ({}) },
             facebook: { type: socialLinkSchema, default: () => ({}) }
-        }
+        },
+        contact_hero_image_url: { type: String, default: '' },
+        contact_email: { type: String, default: '' }
     },
     {
         timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },

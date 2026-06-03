@@ -32,6 +32,7 @@ const Order = require('./models/Order');
 const OrderItem = require('./models/OrderItem');
 const AdminUser = require('./models/AdminUser');
 const SiteSettings = require('./models/SiteSettings');
+const PaidCheckoutNotification = require('./models/PaidCheckoutNotification');
 
 module.exports = {
     Product,
@@ -40,6 +41,7 @@ module.exports = {
     OrderItem,
     AdminUser,
     SiteSettings,
+    PaidCheckoutNotification,
     connectDb,
     disconnectDb
 };

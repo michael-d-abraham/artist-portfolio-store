@@ -7,6 +7,7 @@ import AdminForm from '../pages/AdminForm.vue';
 import AdminCreate from '../pages/AdminCreate.vue';
 import AdminInstagramAi from '../pages/AdminInstagramAi.vue';
 import AdminSocialLinks from '../pages/AdminSocialLinks.vue';
+import AdminDisplayPictures from '../pages/AdminDisplayPictures.vue';
 import AdminLogin from '../pages/AdminLogin.vue';
 import Checkout from '../pages/Checkout.vue';
 import OrderSuccess from '../pages/OrderSuccess.vue';
@@ -34,7 +35,8 @@ const routes = [
     { path: '/admin/new', name: 'admin-new', component: AdminCreate },
     { path: '/admin/edit/:id', name: 'admin-edit', component: AdminForm, props: true },
     { path: '/admin/instagram-ai', name: 'admin-instagram-ai', component: AdminInstagramAi },
-    { path: '/admin/social-links', name: 'admin-social-links', component: AdminSocialLinks }
+    { path: '/admin/social-links', name: 'admin-social-links', component: AdminSocialLinks },
+    { path: '/admin/display-pictures', name: 'admin-display-pictures', component: AdminDisplayPictures }
 ];
 
 const router = createRouter({

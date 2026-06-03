@@ -1,5 +1,6 @@
 const { getStripe } = require('../utils/stripeClient');
 const { fulfillOrderFromStripeSession } = require('../services/fulfillOrderFromStripeSession');
+const { sendPaidTransactionNotification } = require('../services/orderNotificationEmailService');
 
 const stripeWebhookHandler = async (req, res) => {
     const secret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -34,11 +35,10 @@ const stripeWebhookHandler = async (req, res) => {
             const result = await fulfillOrderFromStripeSession(session);
             if (!result.ok) {
                 console.error('Order fulfillment failed', result.error, session.id);
+                await sendPaidTransactionNotification(session.id);
                 return res.status(500).json({ error: result.error });
             }
-            if (result.duplicate) {
-                console.log('Stripe webhook duplicate (idempotent)', session.id, result.orderId);
-            }
+            await sendPaidTransactionNotification(session.id);
         }
         return res.json({ received: true });
     } catch (err) {

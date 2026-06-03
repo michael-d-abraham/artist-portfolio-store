@@ -55,6 +55,54 @@ export function getPublicSocialLinks() {
     return fetchJson('/api/site/social-links');
 }
 
+export function getPublicContactHero() {
+    return fetchJson('/api/site/contact-hero');
+}
+
+export function getPublicContactEmail() {
+    return fetchJson('/api/site/contact-email');
+}
+
+/** Contact form — returns { success, message }; throws on failure with message in Error. */
+export async function submitContactForm(body) {
+    const res = await fetch('/api/contact', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+
+    const text = await res.text();
+    let data = {};
+    if (text) {
+        try {
+            data = JSON.parse(text);
+        } catch {
+            data = {};
+        }
+    }
+
+    if (!res.ok || data.success === false) {
+        const err = new Error(data.message || 'Unable to send message.');
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+
+    return data;
+}
+
+export function getAdminDisplayPictures() {
+    return fetchJson('/api/admin/site/display-pictures');
+}
+
+export function updateAdminDisplayPictures(body) {
+    return fetchJson('/api/admin/site/display-pictures', {
+        method: 'PUT',
+        body
+    });
+}
+
 export function getAdminSocialLinks() {
     return fetchJson('/api/admin/site/social-links');
 }

@@ -1,9 +1,14 @@
 <template>
   <div class="product-image-gallery">
     <div
+      ref="viewportRef"
       class="product-image-gallery__viewport"
+      :class="{ 'product-image-gallery__viewport--swipeable': canSwipe }"
       @touchstart.passive="onTouchStart"
       @touchend.passive="onTouchEnd"
+      @pointerdown="onPointerDown"
+      @pointerup="onPointerUp"
+      @pointercancel="onPointerUp"
     >
       <img
         v-if="currentImage"
@@ -12,6 +17,27 @@
         :alt="currentImage.alt_text || imageAlt"
       />
       <p v-else class="product-image-gallery__empty">No image</p>
+
+      <button
+        v-if="canSwipe"
+        type="button"
+        class="product-image-gallery__nav product-image-gallery__nav--prev"
+        :disabled="!canGoPrev"
+        aria-label="Previous image"
+        @click.stop="goPrev"
+      >
+        ‹
+      </button>
+      <button
+        v-if="canSwipe"
+        type="button"
+        class="product-image-gallery__nav product-image-gallery__nav--next"
+        :disabled="!canGoNext"
+        aria-label="Next image"
+        @click.stop="goNext"
+      >
+        ›
+      </button>
 
       <button
         v-if="currentImage && images.length"
@@ -31,7 +57,12 @@
       </button>
     </div>
 
-    <div v-if="images.length" class="product-image-gallery__dots" role="tablist" :aria-label="`${images.length} product images`">
+    <div
+      v-if="showDots"
+      class="product-image-gallery__dots"
+      role="tablist"
+      :aria-label="`${images.length} product images`"
+    >
       <button
         v-for="(img, index) in images"
         :key="img._id || img.image_url || index"
@@ -56,6 +87,26 @@
       >
         <button type="button" class="product-image-gallery__lightbox-close" aria-label="Close" @click="lightboxOpen = false">
           ×
+        </button>
+        <button
+          v-if="canSwipe"
+          type="button"
+          class="product-image-gallery__nav product-image-gallery__nav--prev product-image-gallery__nav--lightbox"
+          :disabled="!canGoPrev"
+          aria-label="Previous image"
+          @click.stop="goPrev"
+        >
+          ‹
+        </button>
+        <button
+          v-if="canSwipe"
+          type="button"
+          class="product-image-gallery__nav product-image-gallery__nav--next product-image-gallery__nav--lightbox"
+          :disabled="!canGoNext"
+          aria-label="Next image"
+          @click.stop="goNext"
+        >
+          ›
         </button>
         <img
           class="product-image-gallery__lightbox-img"
@@ -83,8 +134,13 @@ const props = defineProps({
 
 const activeIndex = ref(0);
 const lightboxOpen = ref(false);
-let touchStartX = 0;
+const viewportRef = ref(null);
+let swipeStartX = 0;
 
+const canSwipe = computed(() => props.images.length > 1);
+const showDots = computed(() => props.images.length > 1);
+const canGoPrev = computed(() => activeIndex.value > 0);
+const canGoNext = computed(() => activeIndex.value < props.images.length - 1);
 const currentImage = computed(() => props.images[activeIndex.value] || null);
 
 watch(
@@ -95,19 +151,49 @@ watch(
   }
 );
 
+function goNext() {
+  if (activeIndex.value < props.images.length - 1) {
+    activeIndex.value += 1;
+  }
+}
+
+function goPrev() {
+  if (activeIndex.value > 0) {
+    activeIndex.value -= 1;
+  }
+}
+
+function applySwipeDelta(delta) {
+  if (!canSwipe.value || Math.abs(delta) < 40) return;
+  if (delta < 0) {
+    goNext();
+  } else {
+    goPrev();
+  }
+}
+
 function onTouchStart(event) {
-  touchStartX = event.changedTouches[0]?.clientX ?? 0;
+  if (!canSwipe.value) return;
+  swipeStartX = event.touches[0]?.clientX ?? 0;
 }
 
 function onTouchEnd(event) {
+  if (!canSwipe.value) return;
   const endX = event.changedTouches[0]?.clientX ?? 0;
-  const delta = endX - touchStartX;
-  if (Math.abs(delta) < 40) return;
-  if (delta < 0 && activeIndex.value < props.images.length - 1) {
-    activeIndex.value += 1;
-  } else if (delta > 0 && activeIndex.value > 0) {
-    activeIndex.value -= 1;
-  }
+  applySwipeDelta(endX - swipeStartX);
+}
+
+function onPointerDown(event) {
+  if (!canSwipe.value || event.pointerType === 'touch') return;
+  if (event.button !== 0) return;
+  swipeStartX = event.clientX;
+  viewportRef.value?.setPointerCapture?.(event.pointerId);
+}
+
+function onPointerUp(event) {
+  if (!canSwipe.value || event.pointerType === 'touch') return;
+  applySwipeDelta(event.clientX - swipeStartX);
+  viewportRef.value?.releasePointerCapture?.(event.pointerId);
 }
 </script>
 
@@ -125,6 +211,22 @@ function onTouchEnd(event) {
   align-items: center;
   justify-content: center;
   background: var(--color-product-image-bg);
+  touch-action: pan-y pinch-zoom;
+}
+
+.product-image-gallery__viewport--swipeable {
+  cursor: grab;
+  user-select: none;
+}
+
+.product-image-gallery__viewport--swipeable:active {
+  cursor: grabbing;
+}
+
+@media (min-width: 641px) {
+  .product-image-gallery__viewport {
+    height: min(52vh, 480px);
+  }
 }
 
 .product-image-gallery__image {
@@ -145,10 +247,50 @@ function onTouchEnd(event) {
   letter-spacing: 0.06em;
 }
 
+.product-image-gallery__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 44px;
+  height: 56px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-text);
+  font-size: 2.25rem;
+  line-height: 1;
+  font-weight: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.product-image-gallery__nav--prev {
+  left: 0;
+}
+
+.product-image-gallery__nav--next {
+  right: 0;
+}
+
+.product-image-gallery__nav:hover:not(:disabled) {
+  opacity: 0.55;
+  background: transparent;
+}
+
+.product-image-gallery__nav:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
 .product-image-gallery__enlarge {
   position: absolute;
   right: 0;
   bottom: 0;
+  z-index: 2;
   width: 40px;
   height: 40px;
   padding: 0;
@@ -213,6 +355,18 @@ function onTouchEnd(event) {
   line-height: 1;
   color: var(--color-text);
   box-shadow: none;
+}
+
+.product-image-gallery__nav--lightbox {
+  color: var(--color-text);
+}
+
+.product-image-gallery__nav--lightbox.product-image-gallery__nav--prev {
+  left: 8px;
+}
+
+.product-image-gallery__nav--lightbox.product-image-gallery__nav--next {
+  right: 8px;
 }
 
 .product-image-gallery__lightbox-img {

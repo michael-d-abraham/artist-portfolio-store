@@ -56,6 +56,20 @@ async function ensureSiteSettingsDoc() {
     return doc;
 }
 
+function normalizeContactEmail(value) {
+    if (value === undefined || value === null) {
+        return { contact_email: '' };
+    }
+    const email = String(value).trim();
+    if (!email) {
+        return { contact_email: '' };
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return { errors: ['contact_email must be a valid email address'] };
+    }
+    return { contact_email: email };
+}
+
 function toAdminPayload(doc) {
     const links = doc.social_links || {};
     const social_links = {};
@@ -66,7 +80,9 @@ function toAdminPayload(doc) {
             enabled: row.enabled !== false
         };
     });
-    return { social_links };
+    const contact_email =
+        doc.contact_email != null ? String(doc.contact_email).trim() : '';
+    return { social_links, contact_email };
 }
 
 function toPublicPayload(doc) {
@@ -90,15 +106,93 @@ async function getPublicSocialLinks() {
     return { links: toPublicPayload(doc) };
 }
 
-async function updateSocialSettings(body) {
-    const parsed = normalizeSocialLinksInput(body && body.social_links);
+async function getPublicContactEmail() {
+    const doc = await ensureSiteSettingsDoc();
+    const email = doc.contact_email != null ? String(doc.contact_email).trim() : '';
+    return { email: email || null };
+}
+
+function normalizeContactHeroImageUrl(value) {
+    if (value === undefined || value === null) {
+        return { contact_hero_image_url: '' };
+    }
+    const url = String(value).trim();
+    if (!url) {
+        return { contact_hero_image_url: '' };
+    }
+    if (!isValidHttpUrl(url)) {
+        return { errors: ['contact_hero_image_url must be a valid http or https URL'] };
+    }
+    return { contact_hero_image_url: url };
+}
+
+function toDisplayPicturesPayload(doc) {
+    const url = doc.contact_hero_image_url != null ? String(doc.contact_hero_image_url).trim() : '';
+    return { contact_hero_image_url: url };
+}
+
+async function getAdminDisplayPictures() {
+    const doc = await ensureSiteSettingsDoc();
+    return toDisplayPicturesPayload(doc);
+}
+
+async function getPublicContactHero() {
+    const doc = await ensureSiteSettingsDoc();
+    const url =
+        doc.contact_hero_image_url != null ? String(doc.contact_hero_image_url).trim() : '';
+    return { image_url: url || null };
+}
+
+async function updateDisplayPictures(body) {
+    const parsed = normalizeContactHeroImageUrl(
+        body && body.contact_hero_image_url
+    );
     if (parsed.errors) {
         return { ok: false, status: 400, errors: parsed.errors };
     }
 
     const doc = await SiteSettings.findOneAndUpdate(
         { key: SETTINGS_KEY },
-        { $set: { social_links: parsed.social_links } },
+        { $set: { contact_hero_image_url: parsed.contact_hero_image_url } },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    return { ok: true, settings: toDisplayPicturesPayload(doc) };
+}
+
+async function updateSocialSettings(body) {
+    const errors = [];
+    const $set = {};
+
+    if (body && body.social_links !== undefined) {
+        const parsed = normalizeSocialLinksInput(body.social_links);
+        if (parsed.errors) {
+            errors.push(...parsed.errors);
+        } else {
+            $set.social_links = parsed.social_links;
+        }
+    }
+
+    if (body && body.contact_email !== undefined) {
+        const emailParsed = normalizeContactEmail(body.contact_email);
+        if (emailParsed.errors) {
+            errors.push(...emailParsed.errors);
+        } else {
+            $set.contact_email = emailParsed.contact_email;
+        }
+    }
+
+    if (errors.length) {
+        return { ok: false, status: 400, errors };
+    }
+
+    if (!Object.keys($set).length) {
+        return { ok: false, status: 400, errors: ['No fields to update'] };
+    }
+
+    const doc = await SiteSettings.findOneAndUpdate(
+        { key: SETTINGS_KEY },
+        { $set },
         { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
@@ -108,6 +202,10 @@ async function updateSocialSettings(body) {
 module.exports = {
     getAdminSocialSettings,
     getPublicSocialLinks,
+    getPublicContactEmail,
     updateSocialSettings,
+    getAdminDisplayPictures,
+    getPublicContactHero,
+    updateDisplayPictures,
     ensureSiteSettingsDoc
 };

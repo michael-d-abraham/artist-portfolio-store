@@ -10,6 +10,7 @@
     />
   </Teleport>
   <nav
+    v-bind="$attrs"
     class="mobile-menu-drawer"
     :class="{ 'mobile-menu-drawer--open': mobileMenuOpen }"
     aria-label="Main"
@@ -45,6 +46,8 @@
 
 <script setup>
 import { useMobileNav } from '../../composables/useMobileNav.js';
+
+defineOptions({ inheritAttrs: false });
 
 const { mobileMenuOpen, closeMobileMenu } = useMobileNav();
 </script>

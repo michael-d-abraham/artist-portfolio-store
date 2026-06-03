@@ -37,7 +37,7 @@ Full-stack web application for an independent artist: a **public product gallery
    npm install
    ```
 
-2. Configure environment variables (e.g. `.env`): **MongoDB connection string**, **session secret**, **`STRIPE_SECRET_KEY`**, **`STRIPE_WEBHOOK_SECRET`**, **`CLIENT_URL`** (e.g. `http://localhost:5173`), **Cloudflare R2** (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_ENDPOINT`, `R2_PUBLIC_URL`) for admin image uploads, and optionally **`OLLAMA_HOST`** / **`OLLAMA_MODEL`**.
+2. Configure environment variables (e.g. `.env`): **MongoDB connection string**, **session secret**, **`STRIPE_SECRET_KEY`**, **`STRIPE_WEBHOOK_SECRET`**, **`CLIENT_URL`** (e.g. `http://localhost:5173`), **Cloudflare R2** (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_ENDPOINT`, `R2_PUBLIC_URL`) for admin image uploads, **`RESEND_API_KEY`** (and optional **`NOTIFICATION_EMAIL`** / **`RESEND_FROM_EMAIL`**) for the contact form, and optionally **`OLLAMA_HOST`** / **`OLLAMA_MODEL`**.
 
    For local Stripe webhooks: `stripe listen --forward-to localhost:3000/api/webhooks/stripe` and use the printed signing secret as `STRIPE_WEBHOOK_SECRET`.
 
@@ -81,6 +81,7 @@ All routes under **`/api/admin/*`** except session login require an authenticate
 | `GET` | `/api/product/:slug` | Single product with images |
 | `POST` | `/api/checkout/create-session` | Create Stripe Checkout Session (body: `items[]` with `product_id`, `quantity` only) |
 | `POST` | `/api/webhooks/stripe` | Stripe webhook (raw body; `checkout.session.completed`) |
+| `POST` | `/api/contact` | Contact form → Resend email to owner (`{ name, email, subject, message }`) |
 
 ### Session
 

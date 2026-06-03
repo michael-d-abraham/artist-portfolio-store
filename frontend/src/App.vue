@@ -350,7 +350,8 @@ const showSocialFooter = computed(() => {
 @media (min-width: 52rem) {
   .app-main__inner:has(.admin-list),
   .app-main__inner:has(.ig-ai-page),
-  .app-main__inner:has(.admin-social) {
+  .app-main__inner:has(.admin-social),
+  .app-main__inner:has(.admin-display) {
     max-width: 88rem;
   }
 }

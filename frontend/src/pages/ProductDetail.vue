@@ -35,15 +35,12 @@
 
       <p v-if="product.description" class="description">{{ product.description }}</p>
 
-      <div v-if="imageList.length" class="gallery-images">
-        <img
-          v-for="img in imageList"
-          :key="img._id || img.image_url"
-          class="product-img"
-          :src="img.image_url"
-          :alt="img.alt_text || productTitle(product)"
-        />
-      </div>
+      <ProductImageGallery
+        v-if="imageList.length"
+        class="detail__gallery"
+        :images="imageList"
+        :image-alt="productTitle(product)"
+      />
 
       <p v-if="product.price_cents != null" class="price">
         {{ formatUsdFromCents(product.price_cents) }} {{ (product.currency || 'usd').toUpperCase() }}
@@ -102,7 +99,9 @@ const imageList = computed(() => {
   if (!Array.isArray(imgs) || !imgs.length) {
     return [];
   }
-  return imgs.filter((i) => i && i.image_url);
+  return imgs
+    .filter((i) => i && i.image_url)
+    .sort((a, b) => Number(!!b.is_primary) - Number(!!a.is_primary));
 });
 
 const formattedPrice = computed(() => {
@@ -231,19 +230,8 @@ watch(() => props.slug, load);
   font-size: 0.9375rem;
 }
 
-.gallery-images {
+.detail__gallery {
   margin-top: var(--space-xl);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.product-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  border: none;
-  background: var(--color-product-image-bg);
 }
 
 .price {

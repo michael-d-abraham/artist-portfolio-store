@@ -10,7 +10,10 @@
           New listing
         </router-link>
         <router-link to="/admin/social-links" class="admin-page__toolbar-btn">
-          Social links
+          Links
+        </router-link>
+        <router-link to="/admin/display-pictures" class="admin-page__toolbar-btn">
+          Display Pictures
         </router-link>
         <router-link to="/admin/instagram-ai" class="admin-page__toolbar-btn">
           Captions
@@ -597,21 +600,44 @@ async function onDelete(p) {
   .admin-page__toolbar {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    grid-auto-rows: 1fr;
+    gap: var(--space-sm);
     width: 100%;
   }
 
   .admin-page__toolbar-btn {
     width: 100%;
+    min-height: 48px;
+    height: 100%;
+    padding: 0.5rem 0.65rem;
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
   }
 
   .admin-page__toolbar-btn--ghost {
     grid-column: 1 / -1;
     margin-left: 0;
+    min-height: 48px;
+    height: auto;
+  }
+
+  .admin-card__actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-sm);
   }
 
   .admin-card__btn {
+    flex: none;
     min-width: 0;
-    flex: 1 1 30%;
+    width: 100%;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0.4rem;
+    line-height: 1.25;
   }
 }
 

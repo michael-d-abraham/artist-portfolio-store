@@ -11,6 +11,7 @@ const stripeWebhookRoutes = require('./routes/stripeWebhook');
 const { listRouter, detailRouter } = require('./routes/catalog');
 const aiIgRoutes = require('./routes/aiIg');
 const siteRoutes = require('./routes/site');
+const contactRoutes = require('./routes/contact');
 const adminSiteSettingsRoutes = require('./routes/adminSiteSettings');
 const adminUploadRoutes = require('./routes/adminUpload');
 const { attachAdminUser, requireAdminRole } = require('./middleware/adminAuth');
@@ -47,6 +48,7 @@ function createApp() {
     app.use('/api/admin/products', ...requireAdmin, adminProductRoutes);
     app.use('/api/admin/site', ...requireAdmin, adminSiteSettingsRoutes);
     app.use('/api/site', siteRoutes);
+    app.use('/api/contact', contactRoutes);
     app.use('/api/products', listRouter);
     app.use('/api/product', detailRouter);
     app.use('/api/checkout', checkoutRoutes);
