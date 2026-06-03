@@ -37,8 +37,8 @@
           <table class="table admin-table">
             <thead>
               <tr>
+                <th class="admin-table__th-image">Image</th>
                 <th>Title</th>
-                <th>Slug</th>
                 <th>Price</th>
                 <th>Stock</th>
                 <th>Status</th>
@@ -47,8 +47,21 @@
             </thead>
             <tbody>
               <tr v-for="p in items" :key="p._id">
+                <td class="admin-table__image-cell">
+                  <div class="admin-thumb" aria-hidden="true">
+                    <img
+                      v-if="thumbUrl(p)"
+                      class="admin-thumb__img"
+                      :src="thumbUrl(p)"
+                      :alt="thumbAlt(p)"
+                      width="48"
+                      height="48"
+                      loading="lazy"
+                    />
+                    <span v-else class="admin-thumb__placeholder">—</span>
+                  </div>
+                </td>
                 <td class="admin-table__title">{{ p.title }}</td>
-                <td><code class="admin-table__slug">{{ p.slug }}</code></td>
                 <td>${{ formatPrice(p.price_cents) }}</td>
                 <td>{{ p.quantity_available ?? '—' }}</td>
                 <td>
@@ -56,13 +69,15 @@
                     class="admin-badge"
                     :class="p.is_active ? 'admin-badge--on' : 'admin-badge--off'"
                   >
-                    {{ p.is_active ? 'Live' : 'Off' }}
+                    {{ statusLabel(p) }}
                   </span>
                 </td>
                 <td>
                   <div class="admin-table__actions">
                     <router-link :to="'/admin/edit/' + p._id" class="admin-action-link">Edit</router-link>
-                    <button type="button" class="admin-action-btn" @click="onToggle(p)">Toggle</button>
+                    <button type="button" class="admin-action-btn" @click="onToggle(p)">
+                      {{ toggleLabel(p) }}
+                    </button>
                     <button type="button" class="admin-action-btn admin-action-btn--danger" @click="onDelete(p)">
                       Delete
                     </button>
@@ -77,19 +92,29 @@
         <ul class="admin-cards">
           <li v-for="p in items" :key="p._id" class="admin-card">
             <div class="admin-card__head">
-              <h3 class="admin-card__title">{{ p.title }}</h3>
+              <div class="admin-card__identity">
+                <div class="admin-thumb admin-thumb--card" aria-hidden="true">
+                  <img
+                    v-if="thumbUrl(p)"
+                    class="admin-thumb__img"
+                    :src="thumbUrl(p)"
+                    :alt="thumbAlt(p)"
+                    width="56"
+                    height="56"
+                    loading="lazy"
+                  />
+                  <span v-else class="admin-thumb__placeholder">—</span>
+                </div>
+                <h3 class="admin-card__title">{{ p.title }}</h3>
+              </div>
               <span
                 class="admin-badge"
                 :class="p.is_active ? 'admin-badge--on' : 'admin-badge--off'"
               >
-                {{ p.is_active ? 'Live' : 'Off' }}
+                {{ statusLabel(p) }}
               </span>
             </div>
             <dl class="admin-card__meta">
-              <div class="admin-card__row">
-                <dt>Slug</dt>
-                <dd><code>{{ p.slug }}</code></dd>
-              </div>
               <div class="admin-card__row">
                 <dt>Price</dt>
                 <dd>${{ formatPrice(p.price_cents) }}</dd>
@@ -103,7 +128,9 @@
               <router-link :to="'/admin/edit/' + p._id" class="admin-card__btn admin-card__btn--primary">
                 Edit
               </router-link>
-              <button type="button" class="admin-card__btn" @click="onToggle(p)">Toggle</button>
+              <button type="button" class="admin-card__btn" @click="onToggle(p)">
+                {{ toggleLabel(p) }}
+              </button>
               <button type="button" class="admin-card__btn admin-card__btn--danger" @click="onDelete(p)">
                 Delete
               </button>
@@ -124,7 +151,11 @@ import {
   toggleAdminProductActive,
   logoutAdmin
 } from '../services/api.js';
-import { formatUsdFromCents } from '../utils/storefrontProduct.js';
+import {
+  formatUsdFromCents,
+  primaryProductImageUrl,
+  productTitle
+} from '../utils/storefrontProduct.js';
 
 const router = useRouter();
 
@@ -134,6 +165,23 @@ const error = ref('');
 
 function formatPrice(cents) {
   return formatUsdFromCents(cents);
+}
+
+function thumbUrl(product) {
+  return primaryProductImageUrl(product);
+}
+
+function thumbAlt(product) {
+  const primary = product?.product_images?.find((i) => i?.is_primary) || product?.product_images?.[0];
+  return primary?.alt_text || productTitle(product);
+}
+
+function statusLabel(product) {
+  return product.is_active ? 'Active' : 'Non Active';
+}
+
+function toggleLabel(product) {
+  return product.is_active ? 'Disabled' : 'Enabled';
 }
 
 async function load() {
@@ -164,7 +212,7 @@ async function onToggle(p) {
     await toggleAdminProductActive(p._id);
     await load();
   } catch (e) {
-    alert(e.message || 'Toggle failed');
+    alert(e.message || 'Could not update listing status');
   }
 }
 
@@ -298,14 +346,52 @@ async function onDelete(p) {
   margin-top: 0;
 }
 
+.admin-table__th-image {
+  width: 4rem;
+}
+
+.admin-table__image-cell {
+  width: 4rem;
+  padding-right: 0.5rem;
+  vertical-align: middle;
+}
+
+.admin-thumb {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-product-image-bg);
+  border: 1px solid var(--color-border);
+  box-sizing: border-box;
+}
+
+.admin-thumb--card {
+  width: 56px;
+  height: 56px;
+}
+
+.admin-thumb__img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+}
+
+.admin-thumb__placeholder {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+
 .admin-table__title {
   font-weight: 500;
   max-width: 16rem;
-}
-
-.admin-table__slug {
-  font-size: 0.8125em;
-  word-break: break-all;
 }
 
 .admin-table__actions {
@@ -393,6 +479,14 @@ async function onDelete(p) {
   justify-content: space-between;
   gap: var(--space-sm);
   margin-bottom: var(--space-md);
+}
+
+.admin-card__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
+  min-width: 0;
 }
 
 .admin-card__title {
