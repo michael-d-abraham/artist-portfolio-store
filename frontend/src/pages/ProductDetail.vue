@@ -1,7 +1,5 @@
 <template>
   <div class="product-page">
-    <MobileHeader v-if="isMobile" />
-
     <p v-if="loading" class="product-page__status">Loading…</p>
     <p v-else-if="error" class="error product-page__status">{{ error }}</p>
 
@@ -69,7 +67,6 @@ import {
   productFormat,
   formatUsdFromCents
 } from '../utils/storefrontProduct.js';
-import MobileHeader from '../components/mobile/MobileHeader.vue';
 import ProductBreadcrumb from '../components/product/ProductBreadcrumb.vue';
 import ProductImageGallery from '../components/product/ProductImageGallery.vue';
 import ProductInfo from '../components/product/ProductInfo.vue';
@@ -190,11 +187,11 @@ watch(() => props.slug, load);
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: calc(var(--mobile-product-header-height, 64px) + 12px) 20px 48px;
+  padding: 12px 20px 48px;
 }
 
 .product-page__status {
-  padding: calc(var(--mobile-product-header-height, 64px) + 20px) 20px;
+  padding: 20px;
   text-align: center;
   color: var(--color-text-muted);
 }

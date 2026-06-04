@@ -14,6 +14,8 @@ const siteRoutes = require('./routes/site');
 const contactRoutes = require('./routes/contact');
 const adminSiteSettingsRoutes = require('./routes/adminSiteSettings');
 const adminUploadRoutes = require('./routes/adminUpload');
+const adminOrderRoutes = require('./routes/adminOrders');
+const adminDashboardRoutes = require('./routes/adminDashboard');
 const { attachAdminUser, requireAdminRole } = require('./middleware/adminAuth');
 
 function createApp() {
@@ -46,6 +48,8 @@ function createApp() {
     app.use('/api/admin/session', adminSessionRoutes);
     app.use('/api/admin', ...requireAdmin, adminUploadRoutes);
     app.use('/api/admin/products', ...requireAdmin, adminProductRoutes);
+    app.use('/api/admin/orders', ...requireAdmin, adminOrderRoutes);
+    app.use('/api/admin/dashboard', ...requireAdmin, adminDashboardRoutes);
     app.use('/api/admin/site', ...requireAdmin, adminSiteSettingsRoutes);
     app.use('/api/site', siteRoutes);
     app.use('/api/contact', contactRoutes);

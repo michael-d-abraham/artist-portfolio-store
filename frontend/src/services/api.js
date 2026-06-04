@@ -153,6 +153,21 @@ export function logoutAdmin() {
     });
 }
 
+export function getAdminDashboard() {
+    return fetchJson('/api/admin/dashboard');
+}
+
+export function getAdminOrders() {
+    return fetchJson('/api/admin/orders');
+}
+
+export function updateAdminOrderFulfillmentStatus(orderId, fulfillment_status) {
+    return fetchJson(`/api/admin/orders/${encodeURIComponent(orderId)}/fulfillment-status`, {
+        method: 'PATCH',
+        body: { fulfillment_status }
+    });
+}
+
 export function getAdminProducts() {
     return fetchJson('/api/admin/products');
 }

@@ -1,11 +1,11 @@
 <template>
-  <div class="admin-social">
-    <header class="admin-social__header">
+  <div class="admin-social" :class="{ 'admin-social--embedded': embedded }">
+    <header v-if="!embedded" class="admin-social__header">
       <div>
         <h1 class="page-title admin-social__title">Links</h1>
         <p class="admin-social__lead">Contact email and social profiles for the site.</p>
       </div>
-      <router-link to="/admin" class="admin-social__back">← Admin</router-link>
+      <router-link to="/admin/listings" class="admin-social__back">← Listing</router-link>
     </header>
 
     <p v-if="loading" class="admin-social__status">Loading…</p>
@@ -75,6 +75,10 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue';
+
+defineProps({
+  embedded: { type: Boolean, default: false }
+});
 import { getAdminSocialLinks, updateAdminSocialLinks } from '../services/api.js';
 import SocialPlatformIcon from '../components/social/SocialPlatformIcon.vue';
 

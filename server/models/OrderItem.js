@@ -18,7 +18,10 @@ const orderItemSchema = new mongoose.Schema(
         size_label: { type: String, default: null },
         unit_price_cents: { type: Number, required: true },
         quantity: { type: Number, required: true, min: 1 },
-        line_total_cents: { type: Number, required: true }
+        line_total_cents: { type: Number, required: true },
+        stripe_description: { type: String, default: null },
+        stripe_unit_amount_cents: { type: Number, default: null },
+        stripe_line_total_cents: { type: Number, default: null }
     },
     {
         timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },

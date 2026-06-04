@@ -1,63 +1,67 @@
 <template>
-  <div class="admin-create">
-    <h1 class="page-title">New listing</h1>
-    <p class="lead text-muted">
-      Add a product for sale: title, description, format, photos, price, and stock. Each listing is independent in the shop.
-    </p>
+  <div class="admin-page">
+    <header class="admin-page-header">
+      <h1 class="admin-page-header__title">New listing</h1>
+      <router-link to="/admin/listings" class="admin-page-header__btn">← Listing</router-link>
+    </header>
 
-    <form @submit.prevent="onSubmit">
-      <div class="field">
-        <label for="title">Title *</label>
-        <input id="title" v-model="form.title" type="text" autocomplete="off" placeholder="e.g. Swilly Clouds — Canvas" />
-        <p class="help">Shown in the gallery and on the product page. URL slug is generated from this unless you set one below.</p>
-      </div>
+    <div class="admin-float admin-float--padded">
+      <form @submit.prevent="onSubmit">
+        <div class="field">
+          <label for="title">Title *</label>
+          <input id="title" v-model="form.title" type="text" autocomplete="off" placeholder="e.g. Swilly Clouds — Canvas" />
+          <p class="help">Shown in the gallery and on the product page. URL slug is generated from this unless you set one below.</p>
+        </div>
 
-      <div class="field">
-        <label for="desc">Description *</label>
-        <textarea id="desc" v-model="form.description" rows="5" placeholder="Describe the piece" />
-      </div>
+        <div class="field">
+          <label for="desc">Description *</label>
+          <textarea id="desc" v-model="form.description" rows="5" placeholder="Describe the piece" />
+        </div>
 
-      <div class="field">
-        <label for="format">Format</label>
-        <input id="format" v-model="form.format" type="text" placeholder="e.g. Canvas, Poster" />
-        <p class="help">Optional — e.g. print type or medium.</p>
-      </div>
+        <div class="field">
+          <label for="format">Format</label>
+          <input id="format" v-model="form.format" type="text" placeholder="e.g. Canvas, Poster" />
+          <p class="help">Optional — e.g. print type or medium.</p>
+        </div>
 
-      <div class="field">
-        <label for="size">Size</label>
-        <input id="size" v-model="form.size_label" type="text" placeholder='e.g. 16" × 20"' />
-      </div>
+        <div class="field">
+          <label for="size">Size</label>
+          <input id="size" v-model="form.size_label" type="text" placeholder='e.g. 16" × 20"' />
+        </div>
 
-      <div class="field">
-        <label for="year">Year</label>
-        <input id="year" v-model.number="form.year_created" type="number" min="1900" max="2100" step="1" placeholder="Optional" />
-      </div>
+        <div class="field">
+          <label for="year">Year</label>
+          <input id="year" v-model.number="form.year_created" type="number" min="1900" max="2100" step="1" placeholder="Optional" />
+        </div>
 
-      <div class="field">
-        <label for="price">Price (USD) *</label>
-        <input id="price" v-model.number="priceDollars" type="number" min="0" step="0.01" />
-      </div>
+        <div class="field">
+          <label for="price">Price (USD) *</label>
+          <input id="price" v-model.number="priceDollars" type="number" min="0" step="0.01" />
+        </div>
 
-      <div class="field">
-        <label for="qty">Quantity in stock *</label>
-        <input id="qty" v-model.number="form.quantity_available" type="number" min="0" step="1" />
-      </div>
+        <div class="field">
+          <label for="qty">Quantity in stock *</label>
+          <input id="qty" v-model.number="form.quantity_available" type="number" min="0" step="1" />
+        </div>
 
-      <div class="field">
-        <span class="label-text">Pictures</span>
-        <AdminProductImages
-          v-model="imageRows"
-          v-model:primary-index="primaryImageIndex"
-          :disabled="submitting"
-        />
-      </div>
+        <div class="field">
+          <span class="label-text">Pictures</span>
+          <AdminProductImages
+            v-model="imageRows"
+            v-model:primary-index="primaryImageIndex"
+            :disabled="submitting"
+          />
+        </div>
 
-      <p v-if="submitError" class="error">{{ submitError }}</p>
-      <div class="actions">
-        <button type="submit" class="btn-primary" :disabled="submitting">{{ submitting ? 'Saving…' : 'Save listing' }}</button>
-        <router-link to="/admin">Back</router-link>
-      </div>
-    </form>
+        <p v-if="submitError" class="error">{{ submitError }}</p>
+        <div class="actions">
+          <button type="submit" class="admin-panel__btn-primary" :disabled="submitting">
+            {{ submitting ? 'Saving…' : 'Save listing' }}
+          </button>
+          <router-link to="/admin/listings">Cancel</router-link>
+        </div>
+      </form>
+    </div>
   </div>
 </template>
 
@@ -135,7 +139,7 @@ async function onSubmit() {
   submitting.value = true;
   try {
     await createAdminProduct(buildBody());
-    router.push('/admin');
+    router.push('/admin/listings');
   } catch (e) {
     submitError.value = e.message || 'Save failed';
   } finally {
@@ -143,45 +147,3 @@ async function onSubmit() {
   }
 }
 </script>
-
-<style scoped>
-.admin-create {
-  max-width: var(--max-width-narrow);
-  padding-bottom: var(--space-xl);
-}
-
-.admin-create .page-title {
-  margin-bottom: var(--space-sm);
-}
-
-.lead {
-  margin: 0 0 var(--space-lg);
-  line-height: 1.55;
-}
-
-.field {
-  margin-bottom: var(--space-lg);
-}
-
-.field label,
-.label-text {
-  display: block;
-  font-weight: 600;
-  font-size: 0.875rem;
-  margin-bottom: var(--space-xs);
-}
-
-.help {
-  margin: var(--space-xs) 0 0;
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-}
-
-.actions {
-  margin-top: var(--space-xl);
-  display: flex;
-  gap: var(--space-md);
-  align-items: center;
-  flex-wrap: wrap;
-}
-</style>

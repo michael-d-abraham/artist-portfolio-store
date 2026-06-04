@@ -37,7 +37,7 @@ Full-stack web application for an independent artist: a **public product gallery
    npm install
    ```
 
-2. Configure environment variables (e.g. `.env`): **MongoDB connection string**, **session secret**, **`STRIPE_SECRET_KEY`**, **`STRIPE_WEBHOOK_SECRET`**, **`CLIENT_URL`** (e.g. `http://localhost:5173`), **Cloudflare R2** (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_ENDPOINT`, `R2_PUBLIC_URL`) for admin image uploads, **`RESEND_API_KEY`** (and optional **`NOTIFICATION_EMAIL`** / **`RESEND_FROM_EMAIL`**) for the contact form, and optionally **`OLLAMA_HOST`** / **`OLLAMA_MODEL`**.
+2. Configure environment variables (e.g. `.env`): **MongoDB connection string**, **session secret**, **`ADMIN_USERNAME`** / **`ADMIN_PASSWORD`** (creates or syncs the admin user in MongoDB on server start), **`STRIPE_SECRET_KEY`**, **`STRIPE_WEBHOOK_SECRET`**, **`CLIENT_URL`** (e.g. `http://localhost:5173`), **Cloudflare R2** (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_ENDPOINT`, `R2_PUBLIC_URL`) for admin image uploads, **`RESEND_API_KEY`** (and optional **`NOTIFICATION_EMAIL`** / **`RESEND_FROM_EMAIL`**) for the contact form, and optionally **`OLLAMA_HOST`** / **`OLLAMA_MODEL`**.
 
    For local Stripe webhooks: `stripe listen --forward-to localhost:3000/api/webhooks/stripe` and use the printed signing secret as `STRIPE_WEBHOOK_SECRET`.
 
@@ -56,14 +56,21 @@ Full-stack web application for an independent artist: a **public product gallery
    | `npm run dev:all` | API + frontend concurrently |
    | `npm run build` | Production build of the Vue app |
 
+5. **Admin access** — not linked on the public site. Bookmark or open directly:
+
+   - Sign in: `/admin/login`
+   - After login: `/admin/dashboard` (hamburger menu: Dashboard, Orders, Listing, Customize, AI, Settings)
+
+   Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` in the environment (synced to MongoDB on server start). `robots.txt` disallows `/admin` for crawlers.
+
 ---
 
 ## Domain model
 
 - **Product** — Sellable listing: title, slug, description, price (cents), currency, inventory, optional format/size/year, Stripe IDs, visibility, soft-delete.
 - **Product image** — Image URL, sort order, primary flag, alt text.
-- **Order** — Checkout/payment record (customer, Stripe session/intent IDs, status, totals, addresses).
-- **Order item** — Snapshot of purchased line (title, slug, image, size, unit price, quantity, line total).
+- **Order** — Paid checkout record (customer, Stripe session/intent IDs, totals, addresses, embedded `stripe_snapshot` with customer/shipping/amounts at payment time).
+- **Order item** — Snapshot of purchased line (catalog title/price plus optional Stripe line name/amounts).
 - **Admin user** — Username and password hash for back-office access.
 - **Preferred copy (AI)** — Up to five “liked” hooks, captions, and CTAs per category, stored **in server memory**; cleared on server restart.
 
@@ -82,6 +89,7 @@ All routes under **`/api/admin/*`** except session login require an authenticate
 | `POST` | `/api/checkout/create-session` | Create Stripe Checkout Session (body: `items[]` with `product_id`, `quantity` only) |
 | `POST` | `/api/webhooks/stripe` | Stripe webhook (raw body; `checkout.session.completed`) |
 | `POST` | `/api/contact` | Contact form → Resend email to owner (`{ name, email, subject, message }`) |
+| `GET` | `/api/orders/checkout-session/:sessionId` | Paid session summary for order-success page; **also records** the order in MongoDB |
 
 ### Session
 
@@ -102,6 +110,9 @@ All routes under **`/api/admin/*`** except session login require an authenticate
 | `DELETE` | `/api/admin/products/:id` | Soft-delete product |
 | `PATCH` | `/api/admin/products/:id/toggle-active` | Toggle visibility |
 | `POST` | `/api/admin/upload-image` | Multipart upload (`image` field) → R2; returns `{ image_url }` |
+| `GET` | `/api/admin/dashboard` | Dashboard stats (total earned, active listings, new orders) |
+| `GET` | `/api/admin/orders` | List paid orders (MongoDB only — no Stripe calls) |
+| `PATCH` | `/api/admin/orders/:id/fulfillment-status` | Update fulfillment status (`new_order`, `processing`, `shipped`, `completed`, `cancelled`) |
 
 Admin listing photos are uploaded to **Cloudflare R2** (`products/{uuid}.ext`), then persisted as `product_images.image_url` via `images[]` on create (`POST`) or full replace on update (`PUT`). Requires all `R2_*` env vars; the bucket (or custom domain behind `R2_PUBLIC_URL`) must serve objects publicly.
 
@@ -115,7 +126,14 @@ Admin listing photos are uploaded to **Cloudflare R2** (`products/{uuid}.ext`), 
 
 The server loads each product from MongoDB, validates active/not-deleted/stock, builds Stripe `line_items` from **database** `price_cents`, title, and image, and returns `{ "url": "<stripe checkout url>", "sessionId": "cs_..." }`.
 
-On `checkout.session.completed`, the webhook creates an **Order** and **OrderItem** snapshots, decrements `quantity_available`, and is **idempotent** per `stripe_checkout_session_id`.
+Paid orders are stored in MongoDB when Stripe confirms payment, via either:
+
+1. **Stripe webhook** — `checkout.session.completed` → `POST /api/webhooks/stripe`
+2. **Order success page** — `GET /api/orders/checkout-session/:sessionId` after redirect (works without webhook, e.g. local dev)
+
+Both paths call the same idempotent `recordCompletedStoreOrder` logic: creates **Order** + **OrderItem** snapshots (with Stripe customer/address/line-item snapshot), decrements `quantity_available`, keyed by `stripe_checkout_session_id`. Admin **Orders** reads only from MongoDB.
+
+**Production:** configure a Stripe webhook endpoint to `https://your-domain/api/webhooks/stripe` with `checkout.session.completed` and set `STRIPE_WEBHOOK_SECRET`. **Local:** run `stripe listen --forward-to localhost:3000/api/webhooks/stripe` or rely on the order-success API after each test checkout.
 
 **Stripe Checkout flow (matches [Stripe’s guide](https://docs.stripe.com/checkout/quickstart)):**
 
@@ -123,7 +141,7 @@ On `checkout.session.completed`, the webhook creates an **Order** and **OrderIte
 2. Clicks **Checkout** → `POST /api/create-checkout-session` with `{ items: [{ product_id, quantity }] }` only.
 3. Server creates a Session (`mode: payment`, `price_data` or `stripe_price_id` from DB) and returns `{ url }`.
 4. Browser redirects to Stripe-hosted Checkout (`window.location.href = url`).
-5. After payment, Stripe redirects to `/order-success?session_id=…`; the page loads order details from `GET /api/orders/checkout-session/:sessionId` (Stripe as source of truth). Cancel goes to `/checkout/cancel`.
+5. After payment, Stripe redirects to `/order-success?session_id=…`; the page calls `GET /api/orders/checkout-session/:sessionId` (summary for the UI and **persists** the order to MongoDB). Cancel goes to `/checkout/cancel`.
 
 Test card: `4242 4242 4242 4242`.
 

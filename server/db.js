@@ -16,10 +16,13 @@ async function disconnectDb() {
     await mongoose.disconnect();
 }
 
+const { ensureAdminUserFromEnv } = require('./services/ensureAdminUserFromEnv');
+
 if (process.env.NODE_ENV !== 'test' && !process.env.SKIP_DB_AUTO_CONNECT) {
     connectDb()
-        .then(() => {
+        .then(async () => {
             console.log('Connected to MongoDB');
+            await ensureAdminUserFromEnv();
         })
         .catch((err) => {
             console.error('MongoDB connection error:', err);

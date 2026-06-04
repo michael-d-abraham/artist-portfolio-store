@@ -1,11 +1,14 @@
 const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { MongoMemoryReplSet } = require('mongodb-memory-server');
 const { connectDb, disconnectDb, Product, ProductImage, Order, OrderItem } = require('../../server/db');
 
 let memoryServer;
 
 async function startTestDatabase() {
-    memoryServer = await MongoMemoryServer.create();
+    // Transactions (order fulfillment) require a replica set + wiredTiger.
+    memoryServer = await MongoMemoryReplSet.create({
+        replSet: { count: 1, storageEngine: 'wiredTiger' }
+    });
     await connectDb(memoryServer.getUri(), 'artist_portfolio_test');
 }
 

@@ -1,7 +1,7 @@
 const request = require('supertest');
 const { createApp } = require('../server/app');
 const { Order, OrderItem } = require('../server/db');
-const { startTestDatabase, stopTestDatabase, clearDatabase } = require('./helpers/mongo');
+const { startTestDatabase, stopTestDatabase, clearDatabase, getProductStock } = require('./helpers/mongo');
 const {
     mockSessionsRetrieve,
     mockListLineItems,
@@ -26,8 +26,8 @@ describe('GET /api/orders/checkout-session/:sessionId', () => {
         resetStripeMocks();
     });
 
-    it('reads Stripe session only and does not create orders (refresh-safe)', async () => {
-        const product = await createTestProduct();
+    it('records a paid order in MongoDB when the success page loads the session', async () => {
+        const product = await createTestProduct({ quantity_available: 3, price_cents: 2000 });
         const session = buildPaidCheckoutSession(product._id, { id: SESSION_ID });
 
         mockSessionsRetrieve.mockResolvedValue({
@@ -37,17 +37,42 @@ describe('GET /api/orders/checkout-session/:sessionId', () => {
         mockListLineItems.mockResolvedValue(buildStripeLineItemsPage(product._id));
 
         const url = `/api/orders/checkout-session/${SESSION_ID}`;
+        const res = await request(app).get(url);
 
-        const res1 = await request(app).get(url);
-        const res2 = await request(app).get(url);
+        expect(res.status).toBe(200);
+        expect(res.body.session_id).toBe(SESSION_ID);
+        expect(res.body.payment_status).toBe('paid');
 
-        expect(res1.status).toBe(200);
-        expect(res2.status).toBe(200);
-        expect(res1.body.session_id).toBe(SESSION_ID);
-        expect(res1.body.payment_status).toBe('paid');
-        expect(res1.body.items).toHaveLength(1);
+        const orders = await Order.find().lean();
+        expect(orders).toHaveLength(1);
+        expect(orders[0].stripe_checkout_session_id).toBe(SESSION_ID);
+        expect(orders[0].payment_status).toBe('paid');
+        expect(orders[0].stripe_snapshot).toBeTruthy();
+        expect(orders[0].stripe_snapshot.checkout_session_id).toBe(SESSION_ID);
 
-        expect(await Order.countDocuments()).toBe(0);
-        expect(await OrderItem.countDocuments()).toBe(0);
+        const items = await OrderItem.find().lean();
+        expect(items).toHaveLength(1);
+        expect(items[0].product_id.toString()).toBe(String(product._id));
+        expect(await getProductStock(product._id)).toBe(2);
+    });
+
+    it('is idempotent when the success page is refreshed (one order, stock decremented once)', async () => {
+        const product = await createTestProduct({ quantity_available: 5 });
+        const session = buildPaidCheckoutSession(product._id, { id: SESSION_ID, quantity: 2 });
+
+        mockSessionsRetrieve.mockResolvedValue({
+            ...session,
+            line_items: { data: buildStripeLineItemsPage(product._id, 2).data }
+        });
+        mockListLineItems.mockResolvedValue(buildStripeLineItemsPage(product._id, 2));
+
+        const url = `/api/orders/checkout-session/${SESSION_ID}`;
+
+        await request(app).get(url);
+        await request(app).get(url);
+
+        expect(await Order.countDocuments()).toBe(1);
+        expect(await OrderItem.countDocuments()).toBe(1);
+        expect(await getProductStock(product._id)).toBe(3);
     });
 });

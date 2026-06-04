@@ -1,19 +1,21 @@
 <template>
-  <div class="admin-display">
-    <header class="admin-display__header">
+  <div class="admin-display" :class="{ 'admin-display--embedded': embedded }">
+    <header v-if="!embedded" class="admin-display__header">
       <div>
         <h1 class="page-title admin-display__title">Display Pictures</h1>
         <p class="admin-display__lead">Images shown on public pages.</p>
       </div>
-      <router-link to="/admin" class="admin-display__back">← Admin</router-link>
+      <router-link to="/admin/listings" class="admin-display__back">← Listing</router-link>
     </header>
 
     <p v-if="loading" class="admin-display__status">Loading…</p>
     <p v-else-if="loadError" class="error admin-display__status">{{ loadError }}</p>
 
     <section v-else class="admin-display__section" aria-labelledby="contact-pictures-heading">
-      <h2 id="contact-pictures-heading" class="admin-display__section-title">Contact Pictures</h2>
-      <p class="admin-display__hint">Portrait or hero image on the Contact page.</p>
+      <h2 v-if="!embedded" id="contact-pictures-heading" class="admin-display__section-title">
+        Contact Pictures
+      </h2>
+      <p v-if="!embedded" class="admin-display__hint">Portrait or hero image on the Contact page.</p>
 
       <div class="hero-preview">
         <img
@@ -63,6 +65,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+
+defineProps({
+  embedded: { type: Boolean, default: false }
+});
 import {
   getAdminDisplayPictures,
   updateAdminDisplayPictures,

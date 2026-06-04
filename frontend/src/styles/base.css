@@ -66,15 +66,12 @@ a:hover {
   opacity: 0.65;
 }
 
-.app-brand,
-.mobile-header__brand {
+.app-brand {
   opacity: 1;
 }
 
 .app-brand:hover,
-.app-brand:active,
-.mobile-header__brand:hover,
-.mobile-header__brand:active {
+.app-brand:active {
   opacity: 1;
 }
 

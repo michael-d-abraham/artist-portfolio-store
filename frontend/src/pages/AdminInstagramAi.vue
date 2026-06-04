@@ -3,13 +3,12 @@
   Personalized voice persists in localStorage; hearts POST liked lines to /api/admin/ai/save-preferred.
 -->
 <template>
-  <div class="ig-ai-page">
-    <header class="top">
-      <h1 class="page-title top__title">CaptionGenerator</h1>
-      <router-link to="/admin">← Back to listings</router-link>
+  <div class="admin-page">
+    <header class="admin-page-header">
+      <h1 class="admin-page-header__title">AI</h1>
     </header>
 
-    <section class="inputs">
+    <section class="admin-float admin-float--padded">
       <div class="field-row">
         <div class="field">
           <label for="tone">Tone</label>
@@ -51,21 +50,28 @@
         />
       </div>
       <p v-if="error" class="error">{{ error }}</p>
-      <button type="button" class="btn-primary" :disabled="generating" @click="onGenerate">
+      <button
+        type="button"
+        class="admin-panel__btn-primary"
+        :disabled="generating"
+        @click="onGenerate"
+      >
         {{ generating ? 'Generating…' : 'Generate' }}
       </button>
     </section>
 
-    <section v-if="result" class="output">
+    <section v-if="result" class="admin-float admin-float--padded admin-ai-output">
+      <h2 class="admin-float-card__title">Generated content</h2>
+
       <h2>Hooks</h2>
-      <ul class="lines">
+      <ul class="admin-ai-lines">
         <li v-for="(h, i) in result.hooks" :key="'h' + i">
-          <span class="text">{{ h }}</span>
+          <span class="admin-ai-lines__text">{{ h }}</span>
           <button
             type="button"
-            class="heart is-icon"
+            class="admin-ai-lines__heart is-icon"
             :class="{ on: saved.has(heartKey('hook', h)) }"
-            :title="'Save this hook'"
+            title="Save this hook"
             aria-label="Save this hook"
             @click="onHeart('hook', h)"
           >
@@ -75,12 +81,12 @@
       </ul>
 
       <h2>Captions</h2>
-      <ul class="lines">
+      <ul class="admin-ai-lines">
         <li v-for="(c, i) in result.captions" :key="'c' + i">
-          <span class="text">{{ c }}</span>
+          <span class="admin-ai-lines__text">{{ c }}</span>
           <button
             type="button"
-            class="heart is-icon"
+            class="admin-ai-lines__heart is-icon"
             :class="{ on: saved.has(heartKey('caption', c)) }"
             title="Save this caption"
             aria-label="Save this caption"
@@ -92,12 +98,12 @@
       </ul>
 
       <h2>Calls to action</h2>
-      <ul class="lines">
+      <ul class="admin-ai-lines">
         <li v-for="(t, i) in result.ctas" :key="'t' + i">
-          <span class="text">{{ t }}</span>
+          <span class="admin-ai-lines__text">{{ t }}</span>
           <button
             type="button"
-            class="heart is-icon"
+            class="admin-ai-lines__heart is-icon"
             :class="{ on: saved.has(heartKey('cta', t)) }"
             title="Save this CTA"
             aria-label="Save this CTA"
@@ -109,7 +115,7 @@
       </ul>
 
       <h2>Hashtags</h2>
-      <p class="hashtags">{{ result.hashtags.join(' ') }}</p>
+      <p class="admin-ai-hashtags">{{ result.hashtags.join(' ') }}</p>
     </section>
   </div>
 </template>
@@ -191,124 +197,3 @@ async function onHeart(type, text) {
   }
 }
 </script>
-
-<style scoped>
-.ig-ai-page {
-  padding-bottom: var(--space-2xl);
-}
-
-.top {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  margin-bottom: var(--space-lg);
-}
-
-.top__title {
-  margin: 0;
-}
-
-.inputs {
-  max-width: 44rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-lg);
-  box-shadow: var(--shadow-float);
-}
-
-.field {
-  margin-bottom: var(--space-md);
-}
-
-.field-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-lg);
-  margin-bottom: var(--space-md);
-}
-
-.field-row .field {
-  flex: 1;
-  min-width: 12rem;
-  margin-bottom: 0;
-}
-
-.field label {
-  display: block;
-  margin-bottom: var(--space-xs);
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.field textarea,
-.field select {
-  width: 100%;
-  max-width: 44rem;
-  font: inherit;
-}
-
-.inputs .btn-primary {
-  margin-top: var(--space-sm);
-}
-
-.output {
-  margin-top: var(--space-xl);
-  max-width: 44rem;
-}
-
-.output h2 {
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  font-weight: 600;
-  margin: var(--space-lg) 0 var(--space-sm);
-  letter-spacing: 0.02em;
-}
-
-.lines {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.lines li {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-border);
-}
-
-.text {
-  flex: 1;
-  white-space: pre-wrap;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-}
-
-.heart {
-  flex-shrink: 0;
-  cursor: pointer;
-  font-size: 1.2rem;
-  color: var(--color-text-muted);
-}
-
-.heart.on {
-  color: var(--color-error);
-}
-
-.hashtags {
-  white-space: pre-wrap;
-  word-break: break-word;
-  margin: 0;
-  font-size: 0.9375rem;
-  line-height: 1.55;
-  color: var(--color-text);
-}
-</style>

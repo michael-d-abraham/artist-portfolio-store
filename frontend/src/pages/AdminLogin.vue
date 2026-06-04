@@ -61,8 +61,8 @@ async function onSubmit() {
       username: username.value,
       plainPassword: plainPassword.value
     });
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/admin';
-    await router.replace(redirect || '/admin');
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/admin/dashboard';
+    await router.replace(redirect || '/admin/dashboard');
   } catch (e) {
     if (e.status === 401) {
       error.value = 'Invalid username or password.';

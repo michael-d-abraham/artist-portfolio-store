@@ -73,8 +73,11 @@ const { mobileMenuOpen, closeMobileMenu } = useMobileNav();
 }
 
 .mobile-menu-drawer {
-  position: relative;
-  z-index: 1001;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 9;
   display: none;
   width: 100%;
   flex-direction: column;

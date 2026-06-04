@@ -5,8 +5,9 @@ process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_webhook_secret';
 process.env.CLIENT_URL = 'http://localhost:5174';
 process.env.SESSION_SECRET = 'test-session-secret';
 
-const { createMockStripeClient } = require('./helpers/stripeMock');
-
-jest.mock('../server/utils/stripeClient', () => ({
-    getStripe: jest.fn(() => createMockStripeClient())
-}));
+jest.mock('../server/utils/stripeClient', () => {
+    const { createMockStripeClient } = require('./helpers/stripeMock');
+    return {
+        getStripe: jest.fn(() => createMockStripeClient())
+    };
+});

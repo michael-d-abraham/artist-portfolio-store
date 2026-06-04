@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <header
-      v-if="showGlobalHeader"
+      v-if="!isAdminRoute"
       class="app-header site-header is-visible"
       :class="headerHidden ? 'is-hidden' : 'is-visible'"
     >
@@ -35,8 +35,11 @@
       </div>
       <MobileMenuDrawer class="app-header__mobile-nav" />
     </header>
-    <CartDrawer />
-    <main class="app-main" :class="{ 'app-main--product-mobile': isProductMobile }">
+    <CartDrawer v-if="!isAdminRoute" />
+    <main
+      class="app-main"
+      :class="{ 'app-main--product-mobile': isProductMobile, 'app-main--admin': isAdminRoute }"
+    >
       <div class="app-main__inner">
         <router-view />
       </div>
@@ -70,9 +73,7 @@ const isMobile = useMediaQuery(MOBILE_HEADER_MQ);
 const headerBarRef = ref(null);
 const headerHidden = ref(false);
 
-const showGlobalHeader = computed(
-  () => !(isMobile.value && route.name === 'product-detail')
-);
+const isAdminRoute = computed(() => route.path.startsWith('/admin'));
 const isProductMobile = computed(
   () => isMobile.value && route.name === 'product-detail'
 );
@@ -100,7 +101,7 @@ function syncBodyHeaderClasses() {
 /** Reserve space for fixed mobile header so page content is not covered. */
 function syncMobileHeaderOffset() {
   const bar = headerBarRef.value;
-  if (!bar || !isMobileHeaderMode() || route.name === 'product-detail') {
+  if (!bar || !isMobileHeaderMode() || isAdminRoute.value) {
     document.documentElement.style.removeProperty('--mobile-header-height');
     document.documentElement.classList.remove('has-fixed-mobile-header');
     return;
@@ -342,25 +343,50 @@ const showSocialFooter = computed(() => {
   padding: var(--space-xl) var(--space-lg) var(--space-3xl);
 }
 
+.app-main--admin {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.app-main--admin:has(.admin-shell) {
+  overflow: hidden;
+}
+
+.app-main--admin .app-main__inner {
+  max-width: none;
+  margin: 0;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main--admin:has(.admin-shell) .app-main__inner {
+  height: 100%;
+}
+
 .app-main__inner {
   max-width: var(--max-width-page);
   margin: 0 auto;
 }
 
-@media (min-width: 52rem) {
-  .app-main__inner:has(.admin-list),
-  .app-main__inner:has(.ig-ai-page),
-  .app-main__inner:has(.admin-social),
-  .app-main__inner:has(.admin-display) {
-    max-width: 88rem;
-  }
-}
 
 .app {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--color-bg);
+}
+
+.app:has(.admin-shell) {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .app-footer {
@@ -388,10 +414,6 @@ const showSocialFooter = computed(() => {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text-muted);
-}
-
-.app-header {
-  position: relative;
 }
 
 @media (max-width: 640px) {
@@ -426,28 +448,24 @@ const showSocialFooter = computed(() => {
     grid-column: 1;
     grid-row: 1;
     justify-self: start;
+    z-index: 2;
   }
 
   .app-brand {
-    grid-column: 1 / -1;
+    grid-column: 2;
     grid-row: 1;
     justify-self: center;
     font-size: 1.375rem;
     letter-spacing: 0.12em;
-    max-width: none;
-    flex: none;
+    max-width: 100%;
     min-width: 0;
     text-align: center;
-    pointer-events: auto;
-    z-index: 1;
   }
 
   .app-header__end {
     grid-column: 3;
     grid-row: 1;
     justify-self: end;
-    flex: none;
-    min-width: 0;
     justify-content: flex-end;
     gap: 0;
     z-index: 2;
@@ -455,14 +473,6 @@ const showSocialFooter = computed(() => {
 
   .app-nav--desktop {
     display: none;
-  }
-
-  .app-header__mobile-nav {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 9;
   }
 
   .app-main--product-mobile {
@@ -503,9 +513,13 @@ const showSocialFooter = computed(() => {
     transform: translateY(-7px) rotate(-45deg);
   }
 
-  .app-main {
+  .app-main:not(.app-main--admin) {
     /* Fixed header is out of flow — offset top padding by measured bar height */
     padding: calc(var(--mobile-header-height, 72px) + var(--space-lg)) 20px var(--space-2xl);
+  }
+
+  .app-main--admin {
+    padding: 0;
   }
 
   .app-footer {

@@ -1,62 +1,70 @@
 <template>
-  <div class="admin-form-page">
-    <h1 class="page-title">Edit listing</h1>
-    <p class="lead text-muted">Update this product’s shop copy, price, and visibility.</p>
-    <p v-if="loadError" class="error">{{ loadError }}</p>
-    <p v-else-if="loadingProduct">Loading…</p>
-    <form v-else @submit.prevent="onSubmit">
-      <div class="field">
-        <label for="title">Title *</label>
-        <input id="title" v-model="form.title" type="text" autocomplete="off" />
-        <p class="help">Changing the title may update the shop URL slug automatically.</p>
-        <p v-if="fieldErrors.title" class="field-error">{{ fieldErrors.title }}</p>
-      </div>
-      <div class="field">
-        <label for="description">Description *</label>
-        <textarea id="description" v-model="form.description" rows="6" />
-        <p v-if="fieldErrors.description" class="field-error">{{ fieldErrors.description }}</p>
-      </div>
-      <div class="field">
-        <label for="format">Format</label>
-        <input id="format" v-model="form.format" type="text" placeholder="e.g. Canvas" />
-      </div>
-      <div class="field">
-        <label for="size">Size</label>
-        <input id="size" v-model="form.size_label" type="text" />
-      </div>
-      <div class="field">
-        <label for="year">Year</label>
-        <input id="year" v-model.number="form.year_created" type="number" min="1900" max="2100" />
-      </div>
-      <div class="field">
-        <label for="price">Price (USD)</label>
-        <input id="price" v-model.number="priceDollars" type="number" min="0" step="0.01" />
-      </div>
-      <div class="field">
-        <label for="qty">Quantity in stock</label>
-        <input id="qty" v-model.number="form.quantity_available" type="number" min="0" step="1" />
-      </div>
-      <div class="field">
-        <span class="label-text">Pictures</span>
-        <AdminProductImages
-          v-model="imageRows"
-          v-model:primary-index="primaryImageIndex"
-          :disabled="submitting"
-        />
-      </div>
-      <div class="field">
-        <label>
-          <input v-model="form.is_active" type="checkbox" />
-          Active (visible in shop when in stock)
-        </label>
-      </div>
-      <p v-if="slugHint" class="help">Shop slug: <code>{{ slugHint }}</code></p>
-      <p v-if="submitError" class="error">{{ submitError }}</p>
-      <div class="actions">
-        <button type="submit" class="btn-primary" :disabled="submitting">{{ submitting ? 'Saving…' : 'Save' }}</button>
-        <router-link to="/admin">Cancel</router-link>
-      </div>
-    </form>
+  <div class="admin-page">
+    <header class="admin-page-header">
+      <h1 class="admin-page-header__title">Edit listing</h1>
+      <router-link to="/admin/listings" class="admin-page-header__btn">← Listing</router-link>
+    </header>
+
+    <p v-if="loadError" class="error admin-page-header__status">{{ loadError }}</p>
+    <p v-else-if="loadingProduct" class="admin-page-header__status">Loading…</p>
+
+    <div v-else class="admin-float admin-float--padded">
+      <form @submit.prevent="onSubmit">
+        <div class="field">
+          <label for="title">Title *</label>
+          <input id="title" v-model="form.title" type="text" autocomplete="off" />
+          <p class="help">Changing the title may update the shop URL slug automatically.</p>
+          <p v-if="fieldErrors.title" class="field-error">{{ fieldErrors.title }}</p>
+        </div>
+        <div class="field">
+          <label for="description">Description *</label>
+          <textarea id="description" v-model="form.description" rows="6" />
+          <p v-if="fieldErrors.description" class="field-error">{{ fieldErrors.description }}</p>
+        </div>
+        <div class="field">
+          <label for="format">Format</label>
+          <input id="format" v-model="form.format" type="text" placeholder="e.g. Canvas" />
+        </div>
+        <div class="field">
+          <label for="size">Size</label>
+          <input id="size" v-model="form.size_label" type="text" />
+        </div>
+        <div class="field">
+          <label for="year">Year</label>
+          <input id="year" v-model.number="form.year_created" type="number" min="1900" max="2100" />
+        </div>
+        <div class="field">
+          <label for="price">Price (USD)</label>
+          <input id="price" v-model.number="priceDollars" type="number" min="0" step="0.01" />
+        </div>
+        <div class="field">
+          <label for="qty">Quantity in stock</label>
+          <input id="qty" v-model.number="form.quantity_available" type="number" min="0" step="1" />
+        </div>
+        <div class="field">
+          <span class="label-text">Pictures</span>
+          <AdminProductImages
+            v-model="imageRows"
+            v-model:primary-index="primaryImageIndex"
+            :disabled="submitting"
+          />
+        </div>
+        <div class="field">
+          <label>
+            <input v-model="form.is_active" type="checkbox" />
+            Active (visible in shop when in stock)
+          </label>
+        </div>
+        <p v-if="slugHint" class="help">Shop slug: <code>{{ slugHint }}</code></p>
+        <p v-if="submitError" class="error">{{ submitError }}</p>
+        <div class="actions">
+          <button type="submit" class="admin-panel__btn-primary" :disabled="submitting">
+            {{ submitting ? 'Saving…' : 'Save' }}
+          </button>
+          <router-link to="/admin/listings">Cancel</router-link>
+        </div>
+      </form>
+    </div>
   </div>
 </template>
 
@@ -208,7 +216,7 @@ async function onSubmit() {
   try {
     const updated = await updateAdminProduct(productId.value, buildUpdateBody());
     slugHint.value = updated.slug ?? slugHint.value;
-    router.push('/admin');
+    router.push('/admin/listings');
   } catch (e) {
     submitError.value = e.message || 'Save failed';
   } finally {
@@ -216,54 +224,3 @@ async function onSubmit() {
   }
 }
 </script>
-
-<style scoped>
-.admin-form-page {
-  max-width: var(--max-width-narrow);
-  padding-bottom: var(--space-xl);
-}
-
-.admin-form-page .page-title {
-  margin-bottom: var(--space-sm);
-}
-
-.lead {
-  margin: 0 0 var(--space-lg);
-  line-height: 1.55;
-}
-
-.field {
-  margin-bottom: var(--space-lg);
-}
-
-.field label,
-.label-text {
-  display: block;
-  margin-bottom: var(--space-xs);
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.help {
-  margin: var(--space-xs) 0 0;
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-}
-
-.field input[type='text'],
-.field textarea {
-  width: 100%;
-}
-
-.actions {
-  margin-top: var(--space-lg);
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.field-error {
-  margin-top: var(--space-xs);
-}
-</style>

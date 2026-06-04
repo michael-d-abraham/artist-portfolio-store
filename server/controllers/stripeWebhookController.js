@@ -1,5 +1,5 @@
 const { getStripe } = require('../utils/stripeClient');
-const { fulfillOrderFromStripeSession } = require('../services/fulfillOrderFromStripeSession');
+const { recordCompletedStoreOrder } = require('../services/recordCompletedStoreOrder');
 const { sendPaidTransactionNotification } = require('../services/orderNotificationEmailService');
 
 const stripeWebhookHandler = async (req, res) => {
@@ -32,7 +32,7 @@ const stripeWebhookHandler = async (req, res) => {
                 return res.json({ received: true, skipped: 'payment_not_paid' });
             }
 
-            const result = await fulfillOrderFromStripeSession(session);
+            const result = await recordCompletedStoreOrder(session.id);
             if (!result.ok) {
                 console.error('Order fulfillment failed', result.error, session.id);
                 await sendPaidTransactionNotification(session.id);

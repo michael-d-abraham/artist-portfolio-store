@@ -2,12 +2,15 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Gallery from '../pages/Gallery.vue';
 import Contact from '../pages/Contact.vue';
 import ProductDetail from '../pages/ProductDetail.vue';
-import AdminList from '../pages/AdminList.vue';
+import AdminLayout from '../components/admin/AdminLayout.vue';
+import AdminDashboard from '../pages/admin/AdminDashboard.vue';
+import AdminOrders from '../pages/admin/AdminOrders.vue';
+import AdminListings from '../pages/admin/AdminListings.vue';
+import AdminCustomize from '../pages/admin/AdminCustomize.vue';
+import AdminSettings from '../pages/admin/AdminSettings.vue';
 import AdminForm from '../pages/AdminForm.vue';
 import AdminCreate from '../pages/AdminCreate.vue';
 import AdminInstagramAi from '../pages/AdminInstagramAi.vue';
-import AdminSocialLinks from '../pages/AdminSocialLinks.vue';
-import AdminDisplayPictures from '../pages/AdminDisplayPictures.vue';
 import AdminLogin from '../pages/AdminLogin.vue';
 import Checkout from '../pages/Checkout.vue';
 import OrderSuccess from '../pages/OrderSuccess.vue';
@@ -27,16 +30,27 @@ const routes = [
     },
     { path: '/checkout/cancel', name: 'checkout-cancel', component: CheckoutCancel },
     { path: '/contact', name: 'contact', component: Contact },
-    // Old artwork URLs — storefront is product-first; send users to gallery.
     { path: '/art/:slug', redirect: { name: 'gallery' } },
     { path: '/product/:slug', name: 'product-detail', component: ProductDetail, props: true },
     { path: '/admin/login', name: 'admin-login', component: AdminLogin },
-    { path: '/admin', name: 'admin-list', component: AdminList },
-    { path: '/admin/new', name: 'admin-new', component: AdminCreate },
-    { path: '/admin/edit/:id', name: 'admin-edit', component: AdminForm, props: true },
-    { path: '/admin/instagram-ai', name: 'admin-instagram-ai', component: AdminInstagramAi },
-    { path: '/admin/social-links', name: 'admin-social-links', component: AdminSocialLinks },
-    { path: '/admin/display-pictures', name: 'admin-display-pictures', component: AdminDisplayPictures }
+    {
+        path: '/admin',
+        component: AdminLayout,
+        children: [
+            { path: '', redirect: { name: 'admin-dashboard' } },
+            { path: 'dashboard', name: 'admin-dashboard', component: AdminDashboard },
+            { path: 'orders', name: 'admin-orders', component: AdminOrders },
+            { path: 'listings', name: 'admin-listings', component: AdminListings },
+            { path: 'customize', name: 'admin-customize', component: AdminCustomize },
+            { path: 'ai', name: 'admin-ai', component: AdminInstagramAi },
+            { path: 'settings', name: 'admin-settings', component: AdminSettings },
+            { path: 'new', name: 'admin-new', component: AdminCreate },
+            { path: 'edit/:id', name: 'admin-edit', component: AdminForm, props: true }
+        ]
+    },
+    { path: '/admin/social-links', redirect: '/admin/customize' },
+    { path: '/admin/display-pictures', redirect: '/admin/customize' },
+    { path: '/admin/instagram-ai', redirect: '/admin/ai' }
 ];
 
 const router = createRouter({
