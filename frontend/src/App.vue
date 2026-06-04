@@ -187,6 +187,7 @@ watch([mobileMenuOpen, drawerOpen], () => {
 });
 
 onMounted(() => {
+  hydrateCartFromServer();
   window.addEventListener('keydown', onEscape);
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', syncMobileHeaderOffset);

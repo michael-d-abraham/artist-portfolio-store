@@ -1,4 +1,4 @@
-const MongoStore = require('connect-mongo');
+const { MongoStore } = require('connect-mongo');
 const { sessionCookieOptions } = require('./sessionConfig');
 
 const TTL_SECONDS = 7 * 24 * 60 * 60;
