@@ -44,7 +44,7 @@ onMounted(async () => {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: var(--space-lg);
+  gap: var(--space-xl);
   width: 100%;
 }
 
@@ -52,8 +52,8 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 3rem;
+  height: 3rem;
   text-decoration: none;
   border-radius: var(--radius-sm);
   transition: opacity 0.2s ease, background 0.2s ease;
@@ -66,8 +66,8 @@ onMounted(async () => {
 
 @media (max-width: 640px) {
   .social-icon-links__item {
-    width: 44px;
-    height: 44px;
+    width: 2.75rem;
+    height: 2.75rem;
   }
 }
 </style>

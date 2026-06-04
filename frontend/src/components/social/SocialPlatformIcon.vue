@@ -4,10 +4,10 @@
     class="social-platform-icon"
     :src="icon.src"
     :srcset="icon.srcSet"
-    sizes="20px"
+    :sizes="`${icon.width}px`"
     :alt="icon.alt"
-    width="20"
-    height="20"
+    :width="icon.width"
+    :height="icon.height"
     loading="lazy"
     decoding="async"
   />
@@ -30,9 +30,11 @@ const icon = computed(() => SOCIAL_PLATFORM_ICONS[props.platform] || null);
 <style scoped>
 .social-platform-icon {
   display: block;
-  width: 20px;
-  height: 20px;
-  object-fit: cover;
+  width: 36px;
+  height: 36px;
+  max-width: 36px;
+  max-height: 36px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 </style>

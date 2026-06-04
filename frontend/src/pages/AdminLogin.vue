@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { loginAdmin } from '../services/api.js';
 import { adminLoginErrorMessage } from '../utils/adminLoginErrors.js';
@@ -53,6 +53,18 @@ const username = ref('');
 const plainPassword = ref('');
 const error = ref('');
 const busy = ref(false);
+
+onMounted(() => {
+  try {
+    const notice = sessionStorage.getItem('admin_login_notice');
+    if (notice) {
+      error.value = notice;
+      sessionStorage.removeItem('admin_login_notice');
+    }
+  } catch {
+    /* ignore */
+  }
+});
 
 async function onSubmit() {
   error.value = '';

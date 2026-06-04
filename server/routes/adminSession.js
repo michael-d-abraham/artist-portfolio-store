@@ -2,6 +2,7 @@ const express = require('express');
 const AdminUser = require('../models/AdminUser');
 const { verifyPassword } = require('../utils/adminPassword');
 const { attachAdminUser } = require('../middleware/adminAuth');
+const { sessionCookieOptions } = require('../sessionConfig');
 
 const router = express.Router();
 
@@ -37,7 +38,15 @@ router.post('/login', async function (req, res) {
         }
 
         req.session.userId = user._id.toString();
-        res.json({ ok: true, username: user.username });
+        req.session.save(function (saveErr) {
+            if (saveErr) {
+                console.error('admin login session save', saveErr);
+                return res.status(500).json({
+                    error: 'Something went wrong while signing you in. Please try again in a moment.'
+                });
+            }
+            res.json({ ok: true, username: user.username });
+        });
     } catch (err) {
         console.error('admin login', err);
         res.status(500).json({
@@ -63,7 +72,7 @@ router.post('/logout', function (req, res) {
                 error: 'Could not sign you out. Please try again.'
             });
         }
-        res.clearCookie('connect.sid', { path: '/' });
+        res.clearCookie('connect.sid', { path: '/', ...sessionCookieOptions() });
         res.json({ ok: true });
     });
 });

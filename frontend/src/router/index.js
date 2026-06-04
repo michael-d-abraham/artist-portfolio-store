@@ -70,7 +70,17 @@ router.beforeEach(async (to) => {
     try {
         await getAdminSession();
         return true;
-    } catch {
+    } catch (err) {
+        if (err?.status === 401) {
+            try {
+                sessionStorage.setItem(
+                    'admin_login_notice',
+                    'Your sign-in could not be kept active. Try again after the site redeploys, or contact support if this continues.'
+                );
+            } catch {
+                /* ignore */
+            }
+        }
         return { name: 'admin-login', query: { redirect: to.fullPath } };
     }
 });

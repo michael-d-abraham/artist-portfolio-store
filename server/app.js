@@ -17,9 +17,15 @@ const adminUploadRoutes = require('./routes/adminUpload');
 const adminOrderRoutes = require('./routes/adminOrders');
 const adminDashboardRoutes = require('./routes/adminDashboard');
 const { attachAdminUser, requireAdminRole } = require('./middleware/adminAuth');
+const { isProduction, sessionCookieOptions } = require('./sessionConfig');
 
 function createApp() {
     const app = express();
+
+    // Required on Render/Heroku etc. so secure session cookies work behind HTTPS proxy
+    if (isProduction()) {
+        app.set('trust proxy', 1);
+    }
 
     app.use(
         '/api/webhooks/stripe',
@@ -34,12 +40,8 @@ function createApp() {
             secret: process.env.SESSION_SECRET || 'dev-session-secret-change-me',
             saveUninitialized: false,
             resave: false,
-            cookie: {
-                httpOnly: true,
-                sameSite: 'lax',
-                secure: process.env.NODE_ENV === 'production',
-                maxAge: 7 * 24 * 60 * 60 * 1000
-            }
+            proxy: isProduction(),
+            cookie: sessionCookieOptions()
         })
     );
 

@@ -135,7 +135,16 @@ const props = defineProps({
 const activeIndex = ref(0);
 const lightboxOpen = ref(false);
 const viewportRef = ref(null);
+const CONTROL_SELECTOR =
+  '.product-image-gallery__nav, .product-image-gallery__enlarge, .product-image-gallery__lightbox-close';
+
 let swipeStartX = 0;
+let pointerSwipeActive = false;
+let touchSwipeActive = false;
+
+function isControlTarget(target) {
+  return target instanceof Element && Boolean(target.closest(CONTROL_SELECTOR));
+}
 
 const canSwipe = computed(() => props.images.length > 1);
 const showDots = computed(() => props.images.length > 1);
@@ -173,12 +182,14 @@ function applySwipeDelta(delta) {
 }
 
 function onTouchStart(event) {
-  if (!canSwipe.value) return;
+  if (!canSwipe.value || isControlTarget(event.target)) return;
+  touchSwipeActive = true;
   swipeStartX = event.touches[0]?.clientX ?? 0;
 }
 
 function onTouchEnd(event) {
-  if (!canSwipe.value) return;
+  if (!canSwipe.value || !touchSwipeActive) return;
+  touchSwipeActive = false;
   const endX = event.changedTouches[0]?.clientX ?? 0;
   applySwipeDelta(endX - swipeStartX);
 }
@@ -186,14 +197,24 @@ function onTouchEnd(event) {
 function onPointerDown(event) {
   if (!canSwipe.value || event.pointerType === 'touch') return;
   if (event.button !== 0) return;
+  if (isControlTarget(event.target)) return;
+
+  pointerSwipeActive = true;
   swipeStartX = event.clientX;
   viewportRef.value?.setPointerCapture?.(event.pointerId);
 }
 
 function onPointerUp(event) {
   if (!canSwipe.value || event.pointerType === 'touch') return;
+  if (!pointerSwipeActive) return;
+
+  pointerSwipeActive = false;
   applySwipeDelta(event.clientX - swipeStartX);
-  viewportRef.value?.releasePointerCapture?.(event.pointerId);
+  try {
+    viewportRef.value?.releasePointerCapture?.(event.pointerId);
+  } catch {
+    /* pointer may already be released */
+  }
 }
 </script>
 
@@ -230,6 +251,8 @@ function onPointerUp(event) {
 }
 
 .product-image-gallery__image {
+  position: relative;
+  z-index: 1;
   max-width: 100%;
   max-height: 100%;
   width: auto;
@@ -237,6 +260,7 @@ function onPointerUp(event) {
   object-fit: contain;
   object-position: center;
   display: block;
+  pointer-events: none;
 }
 
 .product-image-gallery__empty {
@@ -251,12 +275,13 @@ function onPointerUp(event) {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 2;
-  width: 44px;
-  height: 56px;
+  z-index: 10;
+  width: 48px;
+  height: 100%;
+  max-height: 120px;
   padding: 0;
   border: none;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.72);
   box-shadow: none;
   color: var(--color-text);
   font-size: 2.25rem;
@@ -266,6 +291,7 @@ function onPointerUp(event) {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  pointer-events: auto;
 }
 
 .product-image-gallery__nav--prev {
@@ -290,7 +316,8 @@ function onPointerUp(event) {
   position: absolute;
   right: 0;
   bottom: 0;
-  z-index: 2;
+  z-index: 10;
+  pointer-events: auto;
   width: 40px;
   height: 40px;
   padding: 0;
