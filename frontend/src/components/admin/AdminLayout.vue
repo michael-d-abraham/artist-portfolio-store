@@ -213,6 +213,7 @@ onUnmounted(() => {
   .admin-shell__main {
     padding: 1.25rem max(16px, env(safe-area-inset-left)) max(2rem, env(safe-area-inset-bottom))
       max(16px, env(safe-area-inset-right));
+    overflow-x: clip;
   }
 }
 </style>
