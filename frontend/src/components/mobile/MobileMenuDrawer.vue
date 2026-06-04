@@ -23,6 +23,14 @@
       exact-active-class="mobile-menu-drawer__link--active"
       @click="closeMobileMenu"
     >
+      Home
+    </router-link>
+    <router-link
+      to="/gallery"
+      class="mobile-menu-drawer__link"
+      active-class="mobile-menu-drawer__link--active"
+      @click="closeMobileMenu"
+    >
       Gallery
     </router-link>
     <router-link

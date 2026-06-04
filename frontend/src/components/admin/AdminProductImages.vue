@@ -22,16 +22,28 @@
     </div>
 
     <div class="upload-row">
-      <input
-        ref="fileInput"
-        type="file"
-        accept="image/*"
-        class="file-input"
+      <button
+        type="button"
+        class="upload-trigger"
         :disabled="disabled || uploading"
-        @change="onFileSelected"
-      />
+        @click="openUpload"
+      >
+        Add photo
+      </button>
       <span v-if="uploading" class="upload-status">Uploading…</span>
     </div>
+
+    <AdminPhotoUploadFlow
+      ref="photoFlowRef"
+      :offer-editor="offerPhotoEditor"
+      editor-title="Product photo"
+      free-aspect
+      show-orientation-tools
+      output-file-name="product.jpg"
+      :disabled="disabled || uploading"
+      @file="onPhotoFile"
+      @cancel="onPhotoCancel"
+    />
   </div>
 </template>
 
@@ -53,6 +65,7 @@ export function buildProductImagesPayload(rows, primaryIndex) {
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { uploadAdminImage } from '../../services/api.js';
+import AdminPhotoUploadFlow from './AdminPhotoUploadFlow.vue';
 
 const props = defineProps({
   modelValue: {
@@ -66,6 +79,11 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false
+  },
+  /** Offer edit vs upload-original when adding a product photo. */
+  offerPhotoEditor: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -87,7 +105,7 @@ const rowsWithUrl = computed(() =>
 
 const uploading = ref(false);
 const uploadError = ref('');
-const fileInput = ref(null);
+const photoFlowRef = ref(null);
 
 function setPrimary(index) {
   primaryIndex.value = index;
@@ -112,14 +130,17 @@ function ensurePrimaryIfNeeded() {
   }
 }
 
-async function onFileSelected(event) {
-  const input = event.target;
-  const file = input.files && input.files[0];
-  input.value = '';
+function openUpload() {
+  if (props.disabled) return;
+  uploadError.value = '';
+  photoFlowRef.value?.openPicker();
+}
+
+async function onPhotoFile(file) {
   if (!file || props.disabled) return;
 
-  uploadError.value = '';
   uploading.value = true;
+  uploadError.value = '';
   try {
     const { image_url } = await uploadAdminImage(file);
     const next = [...rows.value, { url: image_url }];
@@ -132,6 +153,10 @@ async function onFileSelected(event) {
   } finally {
     uploading.value = false;
   }
+}
+
+function onPhotoCancel() {
+  /* no-op */
 }
 
 function buildPayload() {
@@ -207,8 +232,25 @@ watch(
   gap: var(--space-sm);
 }
 
-.file-input {
-  max-width: 100%;
+.upload-trigger {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.upload-trigger:hover:not(:disabled) {
+  opacity: 0.65;
+}
+
+.upload-trigger:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 
 .upload-status {

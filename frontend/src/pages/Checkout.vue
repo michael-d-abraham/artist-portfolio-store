@@ -9,7 +9,7 @@
     <p v-else-if="loadError" class="error">{{ loadError }}</p>
     <p v-else-if="!previewLines.length" class="empty">
       Your cart is empty.
-      <router-link to="/">Browse prints</router-link>
+      <router-link to="/gallery">Browse prints</router-link>
     </p>
 
     <template v-else>

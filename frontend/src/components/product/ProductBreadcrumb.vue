@@ -21,7 +21,7 @@ defineProps({
   },
   backTo: {
     type: String,
-    default: '/'
+    default: '/gallery'
   }
 });
 </script>

@@ -17,64 +17,48 @@
       </h2>
       <p v-if="!embedded" class="admin-display__hint">Portrait or hero image on the Contact page.</p>
 
-      <div class="hero-preview">
-        <img
-          v-if="contactHeroUrl"
-          class="hero-preview__img"
-          :src="contactHeroUrl"
-          alt="Current contact hero"
+      <div class="admin-display__image-wrap">
+        <AdminHomePreviewImageSlot
+          :image-url="contactHeroUrl"
+          :disabled="uploading || saving"
+          aria-label="Contact picture"
+          @pick="openUpload"
+          @remove="onRemove"
         />
-        <p v-else class="hero-preview__empty">No contact hero image set.</p>
       </div>
 
+      <p v-if="uploading" class="admin-display__uploading">Uploading…</p>
       <p v-if="actionError" class="error">{{ actionError }}</p>
       <p v-if="saved" class="admin-display__success" role="status">Saved.</p>
-
-      <div class="hero-actions">
-        <label class="hero-actions__upload">
-          <span class="hero-actions__upload-label">{{ uploading ? 'Uploading…' : 'Add or replace picture' }}</span>
-          <input
-            type="file"
-            accept="image/*"
-            class="hero-actions__file"
-            :disabled="uploading || saving"
-            @change="onFileSelected"
-          />
-        </label>
-        <button
-          v-if="contactHeroUrl"
-          type="button"
-          class="hero-actions__remove"
-          :disabled="uploading || saving"
-          @click="onRemove"
-        >
-          Remove picture
-        </button>
-      </div>
     </section>
 
-    <AdminImageCropModal
-      :open="cropOpen"
-      :src="cropSrc"
-      title="Crop contact picture"
-      @apply="onCropApply"
-      @cancel="onCropCancel"
+    <AdminPhotoUploadFlow
+      ref="photoFlowRef"
+      editor-title="Contact picture"
+      :aspect-ratio="4 / 5"
+      :free-aspect="false"
+      show-orientation-tools
+      output-file-name="contact.jpg"
+      :disabled="uploading || saving"
+      @file="onPhotoFile"
+      @cancel="onPhotoCancel"
     />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
-
-defineProps({
-  embedded: { type: Boolean, default: false }
-});
 import {
   getAdminDisplayPictures,
   updateAdminDisplayPictures,
   uploadAdminImage
 } from '../services/api.js';
-import AdminImageCropModal from '../components/admin/AdminImageCropModal.vue';
+import AdminHomePreviewImageSlot from '../components/admin/AdminHomePreviewImageSlot.vue';
+import AdminPhotoUploadFlow from '../components/admin/AdminPhotoUploadFlow.vue';
+
+defineProps({
+  embedded: { type: Boolean, default: false }
+});
 
 const contactHeroUrl = ref('');
 const loading = ref(true);
@@ -83,8 +67,7 @@ const actionError = ref('');
 const saved = ref(false);
 const uploading = ref(false);
 const saving = ref(false);
-const cropOpen = ref(false);
-const cropSrc = ref('');
+const photoFlowRef = ref(null);
 
 function applySettings(data) {
   const url = data?.contact_hero_image_url;
@@ -124,34 +107,12 @@ async function saveUrl(url) {
   }
 }
 
-function revokeCropSrc() {
-  if (cropSrc.value && cropSrc.value.startsWith('blob:')) {
-    URL.revokeObjectURL(cropSrc.value);
-  }
-  cropSrc.value = '';
-}
-
-function onFileSelected(event) {
-  const input = event.target;
-  const file = input.files && input.files[0];
-  input.value = '';
-  if (!file) return;
-
+function openUpload() {
   actionError.value = '';
-  revokeCropSrc();
-  cropSrc.value = URL.createObjectURL(file);
-  cropOpen.value = true;
+  photoFlowRef.value?.openPicker();
 }
 
-function onCropCancel() {
-  cropOpen.value = false;
-  revokeCropSrc();
-}
-
-async function onCropApply(file) {
-  cropOpen.value = false;
-  revokeCropSrc();
-
+async function onPhotoFile(file) {
   uploading.value = true;
   actionError.value = '';
   saved.value = false;
@@ -163,6 +124,10 @@ async function onCropApply(file) {
   } finally {
     uploading.value = false;
   }
+}
+
+function onPhotoCancel() {
+  /* no-op */
 }
 
 async function onRemove() {
@@ -230,76 +195,21 @@ onMounted(load);
   color: var(--color-text-muted);
 }
 
-.hero-preview {
+.admin-display__image-wrap {
   aspect-ratio: 4 / 5;
   max-width: 16rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-product-image-bg);
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--space-md);
 }
 
-.hero-preview__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+.admin-display__image-wrap :deep(.admin-home-img-slot__hit) {
+  min-height: 100%;
+  aspect-ratio: 4 / 5;
 }
 
-.hero-preview__empty {
-  margin: 0;
-  padding: var(--space-md);
+.admin-display__uploading {
+  margin: 0 0 var(--space-sm);
   font-size: 0.875rem;
   color: var(--color-text-muted);
-  text-align: center;
-}
-
-.hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.hero-actions__upload {
-  cursor: pointer;
-}
-
-.hero-actions__upload-label {
-  display: inline-block;
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.hero-actions__file {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  overflow: hidden;
-}
-
-.hero-actions__remove {
-  font-size: 0.875rem;
-  padding: 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-  color: var(--color-text-muted);
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.hero-actions__remove:hover:not(:disabled) {
-  color: var(--color-text);
-}
-
-.hero-actions__remove:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 .admin-display__success {

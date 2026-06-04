@@ -59,6 +59,10 @@ export function getPublicContactHero() {
     return fetchJson('/api/site/contact-hero');
 }
 
+export function getPublicHomePage() {
+    return fetchJson('/api/site/home-page');
+}
+
 export function getPublicContactEmail() {
     return fetchJson('/api/site/contact-email');
 }
@@ -98,6 +102,17 @@ export function getAdminDisplayPictures() {
 
 export function updateAdminDisplayPictures(body) {
     return fetchJson('/api/admin/site/display-pictures', {
+        method: 'PUT',
+        body
+    });
+}
+
+export function getAdminHomePage() {
+    return fetchJson('/api/admin/site/home-page');
+}
+
+export function updateAdminHomePage(body) {
+    return fetchJson('/api/admin/site/home-page', {
         method: 'PUT',
         body
     });

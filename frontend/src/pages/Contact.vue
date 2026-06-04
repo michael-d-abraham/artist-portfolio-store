@@ -3,7 +3,7 @@
     <h1 class="page-hero-title">Contact</h1>
     <div v-if="submitted" class="contact-success" role="status">
       <p class="contact-success__message">{{ successMessage }}</p>
-      <router-link to="/" class="btn-primary contact-success__back">Back to gallery</router-link>
+      <router-link to="/gallery" class="btn-primary contact-success__back">Back to gallery</router-link>
     </div>
 
     <div v-else class="contact-layout">

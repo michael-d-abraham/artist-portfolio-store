@@ -5,7 +5,7 @@
 
     <!-- Mobile product layout -->
     <div v-else-if="product && isMobile" class="product-page__content product-page__content--mobile">
-      <ProductBreadcrumb label="Back to Gallery" back-to="/" />
+      <ProductBreadcrumb label="Back to Gallery" back-to="/gallery" />
       <ProductImageGallery :images="imageList" :image-alt="productTitle(product)" />
       <ProductInfo :title="productTitle(product)" :price="formattedPrice" />
       <SizeDropdown :size-label="product.size_label || ''" />

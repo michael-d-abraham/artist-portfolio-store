@@ -13,10 +13,16 @@
       <h2 class="admin-float-card__title">Contact page image</h2>
       <AdminDisplayPictures embedded />
     </section>
+
+    <section class="admin-float admin-float--padded">
+      <h2 class="admin-float-card__title">Home page</h2>
+      <AdminHomePage embedded />
+    </section>
   </div>
 </template>
 
 <script setup>
 import AdminSocialLinks from '../AdminSocialLinks.vue';
 import AdminDisplayPictures from '../AdminDisplayPictures.vue';
+import AdminHomePage from '../AdminHomePage.vue';
 </script>

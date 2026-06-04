@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import Home from '../pages/Home.vue';
 import Gallery from '../pages/Gallery.vue';
 import Contact from '../pages/Contact.vue';
 import ProductDetail from '../pages/ProductDetail.vue';
@@ -18,7 +19,8 @@ import CheckoutCancel from '../pages/CheckoutCancel.vue';
 import { getAdminSession } from '../services/api.js';
 
 const routes = [
-    { path: '/', name: 'gallery', component: Gallery },
+    { path: '/', name: 'home', component: Home },
+    { path: '/gallery', name: 'gallery', component: Gallery },
     { path: '/checkout', name: 'checkout', component: Checkout },
     { path: '/order-success', name: 'order-success', component: OrderSuccess },
     {

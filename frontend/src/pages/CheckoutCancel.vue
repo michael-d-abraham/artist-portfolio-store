@@ -5,7 +5,7 @@
     <button type="button" class="btn-primary preview-btn" @click="goToPreview">
       Return to order preview
     </button>
-    <router-link to="/" class="link-back">Back to gallery</router-link>
+    <router-link to="/gallery" class="link-back">Back to gallery</router-link>
   </div>
 </template>
 

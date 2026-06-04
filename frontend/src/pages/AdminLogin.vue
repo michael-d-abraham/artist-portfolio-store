@@ -35,7 +35,7 @@
     </form>
 
     <p class="admin-login__back">
-      <router-link to="/">← Back to gallery</router-link>
+      <router-link to="/gallery">← Back to gallery</router-link>
     </p>
   </div>
 </template>

@@ -5,7 +5,10 @@ const {
     updateSocialSettings,
     getAdminDisplayPictures,
     getPublicContactHero,
-    updateDisplayPictures
+    updateDisplayPictures,
+    getAdminHomePage,
+    getPublicHomePage,
+    updateHomePage
 } = require('../services/siteSettingsService');
 
 const getPublicContactEmailHandler = async (_req, res) => {
@@ -84,6 +87,39 @@ const updateAdminDisplayPicturesHandler = async (req, res) => {
     }
 };
 
+const getPublicHomePageHandler = async (_req, res) => {
+    try {
+        const data = await getPublicHomePage();
+        return res.json(data);
+    } catch (err) {
+        console.error('getPublicHomePage', err);
+        return res.status(500).json({ error: 'Failed to load home page' });
+    }
+};
+
+const getAdminHomePageHandler = async (_req, res) => {
+    try {
+        const settings = await getAdminHomePage();
+        return res.json(settings);
+    } catch (err) {
+        console.error('getAdminHomePage', err);
+        return res.status(500).json({ error: 'Failed to load home page settings' });
+    }
+};
+
+const updateAdminHomePageHandler = async (req, res) => {
+    try {
+        const result = await updateHomePage(req.body);
+        if (!result.ok) {
+            return res.status(result.status || 400).json({ errors: result.errors });
+        }
+        return res.json(result.settings);
+    } catch (err) {
+        console.error('updateAdminHomePage', err);
+        return res.status(500).json({ error: 'Failed to save home page settings' });
+    }
+};
+
 module.exports = {
     getPublicContactEmailHandler,
     getPublicSocialLinksHandler,
@@ -91,5 +127,8 @@ module.exports = {
     updateAdminSocialSettingsHandler,
     getPublicContactHeroHandler,
     getAdminDisplayPicturesHandler,
-    updateAdminDisplayPicturesHandler
+    updateAdminDisplayPicturesHandler,
+    getPublicHomePageHandler,
+    getAdminHomePageHandler,
+    updateAdminHomePageHandler
 };

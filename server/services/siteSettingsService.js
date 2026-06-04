@@ -1,9 +1,21 @@
-const { SiteSettings } = require('../db');
+const mongoose = require('mongoose');
+const { SiteSettings, Product } = require('../db');
+const { applyProductRelations } = require('../utils/productPopulate');
+const {
+    primaryProductImageUrl,
+    displayProductName,
+    formatUsdFromCents
+} = require('../utils/storefrontProductDisplay');
 const {
     PLATFORMS,
     DEFAULT_SOCIAL_LINKS,
     isValidHttpUrl
 } = require('../utils/socialLinksDefaults');
+const {
+    FEATURED_PRODUCT_SLOTS,
+    DEFAULT_HOME_PAGE,
+    emptyFeaturedProduct
+} = require('../utils/homePageDefaults');
 
 const SETTINGS_KEY = 'default';
 
@@ -143,6 +155,222 @@ async function getPublicContactHero() {
     return { image_url: url || null };
 }
 
+function normalizeOptionalImageUrl(value, fieldName, errors) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    const url = String(value).trim();
+    if (!url) {
+        return '';
+    }
+    if (!isValidHttpUrl(url)) {
+        errors.push(`${fieldName} must be a valid http or https URL`);
+        return null;
+    }
+    return url;
+}
+
+function normalizeOptionalText(value) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    return String(value).trim();
+}
+
+function padFeaturedProductIds(raw) {
+    const items = Array.isArray(raw) ? raw : [];
+    const result = [];
+    for (let i = 0; i < FEATURED_PRODUCT_SLOTS; i++) {
+        const row = items[i] && typeof items[i] === 'object' ? items[i] : {};
+        const product_id =
+            row.product_id != null
+                ? String(row.product_id).trim()
+                : row._id != null
+                  ? String(row._id).trim()
+                  : '';
+        result.push({ product_id });
+    }
+    return result;
+}
+
+function emptyFeaturedCard() {
+    return {
+        product_id: '',
+        slug: '',
+        title: '',
+        price: '',
+        image_url: ''
+    };
+}
+
+function productToFeaturedCard(product) {
+    if (!product) {
+        return emptyFeaturedCard();
+    }
+    return {
+        product_id: String(product._id),
+        slug: product.slug ? String(product.slug) : '',
+        title: displayProductName(product),
+        price: formatUsdFromCents(product.price_cents),
+        image_url: primaryProductImageUrl(product)
+    };
+}
+
+async function resolveFeaturedProductCards(slots) {
+    const ids = slots
+        .map((s) => s.product_id)
+        .filter((id) => id && mongoose.Types.ObjectId.isValid(id));
+
+    let byId = new Map();
+    if (ids.length) {
+        const products = await applyProductRelations(
+            Product.find({
+                _id: { $in: ids },
+                is_active: true,
+                deleted_at: null
+            })
+        ).exec();
+        byId = new Map(products.map((p) => [String(p._id), p]));
+    }
+
+    return slots.map((slot) => {
+        if (!slot.product_id) {
+            return emptyFeaturedCard();
+        }
+        const product = byId.get(slot.product_id);
+        if (!product) {
+            return { ...emptyFeaturedCard(), product_id: slot.product_id };
+        }
+        return productToFeaturedCard(product);
+    });
+}
+
+function mergeHomePageTextDefaults(stored) {
+    const base = stored && typeof stored === 'object' ? stored : {};
+
+    return {
+        hero_title: normalizeOptionalText(base.hero_title),
+        hero_subtitle: normalizeOptionalText(base.hero_subtitle),
+        hero_image_url: normalizeOptionalText(base.hero_image_url),
+        featured_title:
+            normalizeOptionalText(base.featured_title) || DEFAULT_HOME_PAGE.featured_title,
+        about_title:
+            normalizeOptionalText(base.about_title) || DEFAULT_HOME_PAGE.about_title,
+        about_header: normalizeOptionalText(base.about_header),
+        about_text: normalizeOptionalText(base.about_text),
+        about_image_url: normalizeOptionalText(base.about_image_url)
+    };
+}
+
+function toAdminHomePagePayload(doc) {
+    const base = doc.home_page || {};
+    return {
+        hero_title: normalizeOptionalText(base.hero_title),
+        hero_subtitle: normalizeOptionalText(base.hero_subtitle),
+        hero_image_url: normalizeOptionalText(base.hero_image_url),
+        featured_title: normalizeOptionalText(base.featured_title),
+        featured_products: padFeaturedProductIds(base.featured_products),
+        about_title: normalizeOptionalText(base.about_title),
+        about_header: normalizeOptionalText(base.about_header),
+        about_text: normalizeOptionalText(base.about_text),
+        about_image_url: normalizeOptionalText(base.about_image_url)
+    };
+}
+
+async function toPublicHomePagePayload(doc) {
+    const base = doc.home_page || {};
+    const text = mergeHomePageTextDefaults(base);
+    const slots = padFeaturedProductIds(base.featured_products);
+    const featured_products = await resolveFeaturedProductCards(slots);
+    return { ...text, featured_products };
+}
+
+function normalizeHomePageInput(body) {
+    const errors = [];
+    if (!body || typeof body !== 'object') {
+        return { errors: ['Request body is required'] };
+    }
+
+    const hero_image_url = normalizeOptionalImageUrl(
+        body.hero_image_url,
+        'hero_image_url',
+        errors
+    );
+    if (hero_image_url === null) {
+        return { errors };
+    }
+
+    const about_image_url = normalizeOptionalImageUrl(
+        body.about_image_url,
+        'about_image_url',
+        errors
+    );
+    if (about_image_url === null) {
+        return { errors };
+    }
+
+    const featured_products = [];
+    const rawFeatured = Array.isArray(body.featured_products) ? body.featured_products : [];
+    const usedProductIds = new Set();
+    for (let i = 0; i < FEATURED_PRODUCT_SLOTS; i++) {
+        const row = rawFeatured[i] && typeof rawFeatured[i] === 'object' ? rawFeatured[i] : {};
+        const product_id = normalizeOptionalText(row.product_id);
+        if (product_id) {
+            if (!mongoose.Types.ObjectId.isValid(product_id)) {
+                errors.push(`featured_products[${i}].product_id is invalid`);
+            } else if (usedProductIds.has(product_id)) {
+                errors.push(`featured_products[${i}]: each listing can only be featured once`);
+            } else {
+                usedProductIds.add(product_id);
+            }
+        }
+        featured_products.push({ product_id });
+    }
+
+    if (errors.length) {
+        return { errors };
+    }
+
+    return {
+        home_page: {
+            hero_title: normalizeOptionalText(body.hero_title),
+            hero_subtitle: normalizeOptionalText(body.hero_subtitle),
+            hero_image_url,
+            featured_title: normalizeOptionalText(body.featured_title),
+            featured_products,
+            about_title: normalizeOptionalText(body.about_title),
+            about_header: normalizeOptionalText(body.about_header),
+            about_text: normalizeOptionalText(body.about_text),
+            about_image_url
+        }
+    };
+}
+
+async function getAdminHomePage() {
+    const doc = await ensureSiteSettingsDoc();
+    return toAdminHomePagePayload(doc);
+}
+
+async function getPublicHomePage() {
+    const doc = await ensureSiteSettingsDoc();
+    return await toPublicHomePagePayload(doc);
+}
+
+async function updateHomePage(body) {
+    const parsed = normalizeHomePageInput(body);
+    if (parsed.errors) {
+        return { ok: false, status: 400, errors: parsed.errors };
+    }
+
+    const doc = await SiteSettings.findOneAndUpdate(
+        { key: SETTINGS_KEY },
+        { $set: { home_page: parsed.home_page } },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    return { ok: true, settings: toAdminHomePagePayload(doc) };
+}
+
 async function updateDisplayPictures(body) {
     const parsed = normalizeContactHeroImageUrl(
         body && body.contact_hero_image_url
@@ -207,5 +435,10 @@ module.exports = {
     getAdminDisplayPictures,
     getPublicContactHero,
     updateDisplayPictures,
-    ensureSiteSettingsDoc
+    getAdminHomePage,
+    getPublicHomePage,
+    updateHomePage,
+    ensureSiteSettingsDoc,
+    FEATURED_PRODUCT_SLOTS,
+    emptyFeaturedProduct
 };

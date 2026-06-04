@@ -1,0 +1,49 @@
+/* Shared hero image sizing — public home page and admin preview */
+
+.hero-display {
+  --home-hero-max-height: 80dvh;
+  width: 100%;
+  max-height: var(--home-hero-max-height);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-bottom: none;
+}
+
+.hero-display__inner {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-display__photo {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(var(--home-hero-max-height) - 2 * var(--space-lg));
+  border: none;
+  border-bottom: none;
+  background: none;
+  box-shadow: none;
+  outline: none;
+  object-fit: contain;
+}
+
+@media (min-width: 641px) {
+  .hero-display__photo {
+    max-width: 75vw;
+    max-height: calc(var(--home-hero-max-height) - var(--space-lg) - var(--space-2xl));
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-display__photo {
+    max-height: calc(var(--home-hero-max-height) - var(--space-md) - var(--space-xl));
+  }
+}

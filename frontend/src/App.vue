@@ -20,6 +20,9 @@
         <router-link to="/" class="app-brand" aria-label="PERM home">PERM</router-link>
         <nav class="app-nav app-nav--desktop" aria-label="Main">
           <router-link to="/" class="app-nav__link" exact-active-class="app-nav__link--active">
+            Home
+          </router-link>
+          <router-link to="/gallery" class="app-nav__link" active-class="app-nav__link--active">
             Gallery
           </router-link>
           <router-link to="/contact" class="app-nav__link" active-class="app-nav__link--active">
@@ -38,7 +41,11 @@
     <CartDrawer v-if="!isAdminRoute" />
     <main
       class="app-main"
-      :class="{ 'app-main--product-mobile': isProductMobile, 'app-main--admin': isAdminRoute }"
+      :class="{
+        'app-main--product-mobile': isProductMobile,
+        'app-main--admin': isAdminRoute,
+        'app-main--home': isHomeRoute
+      }"
     >
       <div class="app-main__inner">
         <router-view />
@@ -74,6 +81,7 @@ const headerBarRef = ref(null);
 const headerHidden = ref(false);
 
 const isAdminRoute = computed(() => route.path.startsWith('/admin'));
+const isHomeRoute = computed(() => route.name === 'home');
 const isProductMobile = computed(
   () => isMobile.value && route.name === 'product-detail'
 );
@@ -217,7 +225,7 @@ onUnmounted(() => {
 
 const showSocialFooter = computed(() => {
   const name = route.name;
-  return name === 'gallery' || name === 'contact' || name === 'product-detail';
+  return name === 'home' || name === 'gallery' || name === 'contact' || name === 'product-detail';
 });
 </script>
 
@@ -372,6 +380,16 @@ const showSocialFooter = computed(() => {
 .app-main__inner {
   max-width: var(--max-width-page);
   margin: 0 auto;
+}
+
+.app-main--home {
+  padding: 0;
+}
+
+.app-main--home .app-main__inner {
+  max-width: none;
+  width: 100%;
+  margin: 0;
 }
 
 
