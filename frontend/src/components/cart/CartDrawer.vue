@@ -45,10 +45,12 @@
             <button type="button" class="promo-toggle" @click="togglePromo">
               Enter a promo code
             </button>
-            <div v-if="promoExpanded" class="promo-panel">
-              <input type="text" class="promo-input" placeholder="Promo code" aria-label="Promo code">
-              <button type="button" class="btn-ghost promo-apply">Apply</button>
-            </div>
+            <Transition name="promo-panel">
+              <div v-if="promoExpanded" class="promo-panel">
+                <input type="text" class="promo-input" placeholder="Promo code" aria-label="Promo code">
+                <button type="button" class="btn-ghost promo-apply">Apply</button>
+              </div>
+            </Transition>
           </div>
         </div>
 
@@ -237,6 +239,25 @@ onUnmounted(() => {
   display: flex;
   gap: var(--space-sm);
   margin-top: var(--space-sm);
+  overflow: hidden;
+}
+
+.promo-panel-enter-active,
+.promo-panel-leave-active {
+  transition: max-height 0.28s ease, opacity 0.22s ease, margin 0.28s ease;
+}
+
+.promo-panel-enter-from,
+.promo-panel-leave-to {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+}
+
+.promo-panel-enter-to,
+.promo-panel-leave-from {
+  max-height: 4rem;
+  opacity: 1;
 }
 
 .promo-input {

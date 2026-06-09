@@ -26,12 +26,13 @@
           placeholder="Featured products"
           aria-label="Featured section title"
         />
-        <div class="product-grid product-grid--cols-3 admin-home-preview__product-grid">
+        <div class="admin-home-preview__featured-grid">
           <AdminHomeFeaturedSlot
             v-for="(item, index) in form.featured_products"
             :key="'preview-featured-' + index"
             :product-id="item.product_id"
             :slot-number="index + 1"
+            :mobile-only="index < 3"
             :catalog-products="catalogProducts"
             :taken-product-ids="takenFeaturedProductIds"
             :disabled="disabled"
@@ -172,6 +173,13 @@ const takenFeaturedProductIds = computed(() =>
   max-width: 1100px;
 }
 
+.admin-home-preview__featured-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-lg);
+  align-items: start;
+}
+
 /* —— About —— */
 .admin-home-preview__about {
   padding: 0 var(--space-lg) var(--space-3xl);
@@ -275,12 +283,23 @@ const takenFeaturedProductIds = computed(() =>
   }
 }
 
+@media (max-width: 900px) {
+  .admin-home-preview__featured-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 640px) {
   .admin-home-preview__hero,
   .admin-home-preview__featured,
   .admin-home-preview__about {
     padding-left: var(--space-md);
     padding-right: var(--space-md);
+  }
+
+  .admin-home-preview__featured-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
   }
 
   .admin-home-preview__hero-image-wrap :deep(.admin-home-img-slot__hit:not(:has(.admin-home-img-slot__photo))) {

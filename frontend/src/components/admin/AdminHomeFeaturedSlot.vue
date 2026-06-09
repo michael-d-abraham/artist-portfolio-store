@@ -1,7 +1,10 @@
 <template>
   <article class="admin-home-featured-slot">
     <label class="admin-home-featured-slot__pick">
-      <span class="admin-home-featured-slot__pick-label">Listing {{ slotNumber }}</span>
+      <span class="admin-home-featured-slot__pick-label">
+        Listing {{ slotNumber }}
+        <span v-if="mobileOnly" class="admin-home-featured-slot__badge">Mobile</span>
+      </span>
       <select
         :value="productId"
         class="admin-home-featured-slot__select"
@@ -44,6 +47,7 @@ import GalleryProductCard from '../product/GalleryProductCard.vue';
 const props = defineProps({
   productId: { type: String, default: '' },
   slotNumber: { type: Number, required: true },
+  mobileOnly: { type: Boolean, default: false },
   catalogProducts: { type: Array, default: () => [] },
   takenProductIds: { type: Array, default: () => [] },
   disabled: { type: Boolean, default: false }
@@ -75,17 +79,27 @@ function onSelectChange(event) {
 .admin-home-featured-slot {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-sm);
+  min-width: 0;
   margin: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-sizing: border-box;
 }
 
 .admin-home-featured-slot__pick {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+  min-width: 0;
 }
 
 .admin-home-featured-slot__pick-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -93,8 +107,20 @@ function onSelectChange(event) {
   color: var(--color-text-muted);
 }
 
+.admin-home-featured-slot__badge {
+  padding: 0.1rem 0.35rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+
 .admin-home-featured-slot__select {
   width: 100%;
+  min-width: 0;
   font-size: 0.875rem;
   text-transform: none;
   letter-spacing: 0.02em;
@@ -102,11 +128,57 @@ function onSelectChange(event) {
 
 .admin-home-featured-slot__empty {
   margin: 0;
-  padding: var(--space-lg) var(--space-md);
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
   text-align: center;
   font-size: 0.8125rem;
+  line-height: 1.5;
   color: var(--color-text-muted);
   border: 1px dashed var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-bg);
+  box-sizing: border-box;
+}
+
+.admin-home-featured-slot :deep(.product-card) {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+}
+
+.admin-home-featured-slot :deep(.product-image-link) {
+  height: auto;
+  min-height: 150px;
+}
+
+.admin-home-featured-slot :deep(.product-image-frame) {
+  width: 100%;
+  max-width: 120px;
+  height: auto;
+  min-height: 120px;
+}
+
+.admin-home-featured-slot :deep(.product-image) {
+  max-width: 120px;
+  max-height: 150px;
+}
+
+.admin-home-featured-slot :deep(.product-title) {
+  max-width: 100%;
+  min-height: 0;
+  font-size: 0.875rem;
+}
+
+.admin-home-featured-slot :deep(.product-price) {
+  font-size: 0.875rem;
+}
+
+.admin-home-featured-slot :deep(.add-to-cart-button) {
+  height: 36px;
+  font-size: 0.875rem;
 }
 </style>

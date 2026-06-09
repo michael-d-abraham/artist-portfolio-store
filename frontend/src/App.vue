@@ -544,7 +544,7 @@ const showSocialFooter = computed(() => {
 
   .app-main:not(.app-main--admin) {
     /* Fixed header is out of flow — offset top padding by measured bar height */
-    padding: calc(var(--mobile-header-height, 72px) + var(--space-lg)) 20px var(--space-2xl);
+    padding: calc(var(--mobile-header-height, 72px) + var(--space-lg)) 20px var(--space-lg);
   }
 
   .app-main--admin {
@@ -552,8 +552,11 @@ const showSocialFooter = computed(() => {
   }
 
   .app-footer {
-    padding-left: 20px;
-    padding-right: 20px;
+    padding: var(--space-md) 20px var(--space-md);
+  }
+
+  .app-footer__copyright {
+    margin-top: var(--space-xs);
   }
 }
 
@@ -579,8 +582,7 @@ const showSocialFooter = computed(() => {
   }
 
   .app-footer {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding: var(--space-sm) 16px var(--space-md);
   }
 }
 </style>

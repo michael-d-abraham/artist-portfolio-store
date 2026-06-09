@@ -65,9 +65,13 @@ onMounted(async () => {
 }
 
 @media (max-width: 640px) {
+  .social-icon-links {
+    gap: var(--space-md);
+  }
+
   .social-icon-links__item {
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 2.5rem;
+    height: 2.5rem;
   }
 }
 </style>

@@ -77,43 +77,45 @@
     </div>
 
     <Teleport to="body">
-      <div
-        v-if="lightboxOpen && currentImage"
-        class="product-image-gallery__lightbox"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Enlarged product image"
-        @click.self="lightboxOpen = false"
-      >
-        <button type="button" class="product-image-gallery__lightbox-close" aria-label="Close" @click="lightboxOpen = false">
-          ×
-        </button>
-        <button
-          v-if="canSwipe"
-          type="button"
-          class="product-image-gallery__nav product-image-gallery__nav--prev product-image-gallery__nav--lightbox"
-          :disabled="!canGoPrev"
-          aria-label="Previous image"
-          @click.stop="goPrev"
+      <Transition name="gallery-lightbox">
+        <div
+          v-if="lightboxOpen && currentImage"
+          class="product-image-gallery__lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Enlarged product image"
+          @click.self="lightboxOpen = false"
         >
-          ‹
-        </button>
-        <button
-          v-if="canSwipe"
-          type="button"
-          class="product-image-gallery__nav product-image-gallery__nav--next product-image-gallery__nav--lightbox"
-          :disabled="!canGoNext"
-          aria-label="Next image"
-          @click.stop="goNext"
-        >
-          ›
-        </button>
-        <img
-          class="product-image-gallery__lightbox-img"
-          :src="currentImage.image_url"
-          :alt="currentImage.alt_text || imageAlt"
-        />
-      </div>
+          <button type="button" class="product-image-gallery__lightbox-close" aria-label="Close" @click="lightboxOpen = false">
+            ×
+          </button>
+          <button
+            v-if="canSwipe"
+            type="button"
+            class="product-image-gallery__nav product-image-gallery__nav--prev product-image-gallery__nav--lightbox"
+            :disabled="!canGoPrev"
+            aria-label="Previous image"
+            @click.stop="goPrev"
+          >
+            ‹
+          </button>
+          <button
+            v-if="canSwipe"
+            type="button"
+            class="product-image-gallery__nav product-image-gallery__nav--next product-image-gallery__nav--lightbox"
+            :disabled="!canGoNext"
+            aria-label="Next image"
+            @click.stop="goNext"
+          >
+            ›
+          </button>
+          <img
+            class="product-image-gallery__lightbox-img"
+            :src="currentImage.image_url"
+            :alt="currentImage.alt_text || imageAlt"
+          />
+        </div>
+      </Transition>
     </Teleport>
   </div>
 </template>
@@ -401,5 +403,26 @@ function onPointerUp(event) {
   max-height: 100%;
   object-fit: contain;
   object-position: center;
+}
+
+.gallery-lightbox-enter-active,
+.gallery-lightbox-leave-active {
+  transition: opacity 0.26s ease;
+}
+
+.gallery-lightbox-enter-active .product-image-gallery__lightbox-img,
+.gallery-lightbox-leave-active .product-image-gallery__lightbox-img {
+  transition: transform 0.3s ease, opacity 0.26s ease;
+}
+
+.gallery-lightbox-enter-from,
+.gallery-lightbox-leave-to {
+  opacity: 0;
+}
+
+.gallery-lightbox-enter-from .product-image-gallery__lightbox-img,
+.gallery-lightbox-leave-to .product-image-gallery__lightbox-img {
+  transform: scale(0.94);
+  opacity: 0;
 }
 </style>

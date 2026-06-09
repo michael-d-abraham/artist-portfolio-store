@@ -6,7 +6,7 @@
       </h2>
       <div class="product-grid product-grid--cols-3">
         <GalleryProductCard
-          v-for="p in products"
+          v-for="p in visibleProducts"
           :key="p._id"
           :product="p"
           :show-added="addedId === p._id"
@@ -18,17 +18,26 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useCart } from '../../composables/useCart.js';
+import { useMediaQuery } from '../../composables/useMediaQuery.js';
 import GalleryProductCard from '../product/GalleryProductCard.vue';
 
-defineProps({
+const MOBILE_MQ = '(max-width: 640px)';
+
+const props = defineProps({
   sectionTitle: { type: String, required: true },
   products: {
     type: Array,
     required: true
   }
 });
+
+const isMobile = useMediaQuery(MOBILE_MQ);
+
+const visibleProducts = computed(() =>
+  isMobile.value ? props.products.slice(0, 3) : props.products
+);
 
 const { openDrawer } = useCart();
 const addedId = ref(null);
