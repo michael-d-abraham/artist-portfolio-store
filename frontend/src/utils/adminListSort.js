@@ -8,10 +8,9 @@ export function dateMs(value) {
 /** Fulfillment workflow order for admin status sort. */
 export const FULFILLMENT_STATUS_SORT_RANK = {
   new_order: 0,
-  processing: 1,
-  shipped: 2,
-  completed: 3,
-  cancelled: 4
+  shipped: 1,
+  completed: 2,
+  cancelled: 3
 };
 
 export const ORDER_SORT_OPTIONS = [

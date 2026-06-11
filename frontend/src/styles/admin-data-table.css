@@ -636,9 +636,20 @@
   color: #b42318;
 }
 
-.admin-status-pill--processing {
-  background: #ede4f7;
-  color: #5b3d8a;
+.admin-order-new-dot,
+.admin-dash-stat-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+}
+
+.admin-data-table__cell--order-id {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .admin-status-pill--new {
@@ -678,13 +689,16 @@
 }
 
 .admin-status-select--new {
-  background-color: #e3eef9;
-  color: #1d5aa6;
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  box-shadow: 0 0 0 2px #93c5fd, 0 2px 8px rgba(29, 78, 216, 0.18);
+  transform: scale(1.04);
+  animation: status-new-pulse 2.4s ease-in-out infinite;
 }
 
-.admin-status-select--processing {
-  background-color: #ede4f7;
-  color: #5b3d8a;
+@keyframes status-new-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px #93c5fd, 0 2px 8px rgba(29, 78, 216, 0.18); }
+  50%       { box-shadow: 0 0 0 4px #bfdbfe, 0 2px 14px rgba(29, 78, 216, 0.28); }
 }
 
 .admin-status-select--shipped {
@@ -1193,6 +1207,17 @@
     position: relative;
     overflow: visible;
     padding: 0.5rem 0.625rem;
+  }
+
+  .admin-mobile-card--order.admin-mobile-card--new-order {
+    padding-left: 1.375rem;
+  }
+
+  .admin-mobile-card--order .admin-order-new-dot {
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
   }
 
   .admin-mobile-card--order .admin-mobile-card__corner {

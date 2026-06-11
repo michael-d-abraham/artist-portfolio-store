@@ -16,7 +16,17 @@
       />
 
       <ul class="admin-mobile-cards" aria-label="Orders">
-        <li v-for="order in sortedOrders" :key="order._id" class="admin-mobile-card admin-mobile-card--order">
+        <li
+          v-for="order in sortedOrders"
+          :key="order._id"
+          class="admin-mobile-card admin-mobile-card--order"
+          :class="{ 'admin-mobile-card--new-order': isNewOrder(order.fulfillment_status) }"
+        >
+          <span
+            v-if="isNewOrder(order.fulfillment_status)"
+            class="admin-order-new-dot"
+            aria-hidden="true"
+          ></span>
           <div class="admin-mobile-card__corner">
             <label :for="'status-' + order._id" class="visually-hidden">Order status</label>
             <select
@@ -66,7 +76,12 @@
           </thead>
           <tbody>
             <tr v-for="order in sortedOrders" :key="'row-' + order._id">
-              <td class="admin-data-table__cell--strong admin-data-table__cell--nowrap">
+              <td class="admin-data-table__cell--strong admin-data-table__cell--nowrap admin-data-table__cell--order-id">
+                <span
+                  v-if="isNewOrder(order.fulfillment_status)"
+                  class="admin-order-new-dot"
+                  aria-hidden="true"
+                ></span>
                 {{ order.order_number }}
               </td>
               <td>{{ order.product_summary }}</td>
@@ -107,7 +122,8 @@ import { getAdminOrders, updateAdminOrderFulfillmentStatus } from '../../service
 import { formatUsdFromCents } from '../../utils/storefrontProduct.js';
 import {
     FULFILLMENT_STATUS_OPTIONS,
-    fulfillmentStatusClass
+    fulfillmentStatusClass,
+    isNewOrder
 } from '../../utils/orderFulfillmentStatus.js';
 import { ORDER_SORT_OPTIONS, sortOrders } from '../../utils/adminListSort.js';
 import AdminListSortBar from '../../components/admin/AdminListSortBar.vue';
