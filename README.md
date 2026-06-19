@@ -38,33 +38,25 @@ Walkthroughs of the live product — storefront, admin, checkout flow, AI agent,
 
 A quick tour of the public site: browsing the gallery, viewing product detail, adding to cart, and completing payment through **Stripe Checkout**. Prices and inventory always come from the server — the browser never controls what gets charged.
 
-<video src="./images/userfacing.mp4" controls width="100%"></video>
-
-[Download video](./images/userfacing.mp4)
+![Storefront & Stripe checkout demo](./images/userfacing.gif)
 
 ### 2. Admin dashboard
 
 Overview of the private admin workspace: earnings, active listings, recent orders, and how the layout responds on different screen sizes. Everything the owner needs to run the shop lives here — no separate tools required.
 
-<video src="./images/dashboard-overview.mp4" controls width="100%"></video>
-
-[Download video](./images/dashboard-overview.mp4)
+![Admin dashboard demo](./images/dashboard-overview.gif)
 
 ### 3. Successful purchase → admin update
 
 End-to-end proof that commerce is wired up: a customer completes checkout, the **dashboard updates** with the new order, **inventory decrements**, and the **store owner receives an email** notification. One purchase triggers the full backend pipeline.
 
-<video src="./images/successful-purchase-admin.mp4" controls width="100%"></video>
-
-[Download video](./images/successful-purchase-admin.mp4)
+![Successful purchase demo](./images/successful-purchase-admin.gif)
 
 ### 4. AI agentic caption flow
 
 The built-in marketing assistant in action. This is not a single prompt → text box — it is a **LangGraph agent** that calls tools to load the artist's saved voice profile and hearted examples, generates structured output (hooks, captions, CTAs, hashtags), and validates the response with **Zod** before returning it. The model decides when to fetch context; the app decides when output is valid.
 
-<video src="./images/artists-agentic-flow.mp4" controls width="100%"></video>
-
-[Download video](./images/artists-agentic-flow.mp4)
+![AI agentic flow demo](./images/artists-agentic-flow.gif)
 
 **What makes this impressive technically**
 
@@ -77,9 +69,7 @@ The built-in marketing assistant in action. This is not a single prompt → text
 
 Every major section of the public site — home hero, featured work, about copy, contact page labels, social links, and images — can be changed from **Admin → Customize**. Upload new photos, edit text, pick featured products, and preview changes without touching the codebase.
 
-<video src="./images/customize.mp4" controls width="100%"></video>
-
-[Download video](./images/customize.mp4)
+![Customize site demo](./images/customize.gif)
 
 ---
 
