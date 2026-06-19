@@ -1,189 +1,262 @@
-# Art Shop — Full-stack gallery, admin & AI content assistant
+# Artist Portfolio Store
 
-Full-stack web application for an independent artist: a **public product gallery**, a **password-protected admin** area for listing management, and a **LangGraph + Ollama assistant** for **Instagram-style copy** (hooks, captions, CTAs, hashtags).
+**Live site:** [artist-portfolio-store.onrender.com](https://artist-portfolio-store.onrender.com/)
 
-*Academic project — Vue 3 + Express + MongoDB.*
+> Hosted on Render. If the site has been idle, the first load can take about **20 seconds** while the server spins up — then it runs normally.
+
+A **complete ecommerce platform** for independent artists — gallery, checkout, order management, and an **AI-powered content assistant**, all in one codebase.
+
+The app is built as **two separate sides** that share the same backend:
+
+| | **Front face** (public) | **Admin side** (private) |
+|---|---|---|
+| **Who sees it** | Visitors, buyers, collectors | The artist / shop owner |
+| **Purpose** | Browse, buy, contact | Manage the entire business |
+| **URL** | `/`, `/gallery`, `/checkout`, … | `/admin/*` (login required) |
+
+The **front face** is the customer-facing storefront. The **admin side** is a full back-office: listings, orders, site customization, settings, and AI tools. The admin is **completely customizable** — swap branding, copy, and layout and you can reuse this same build for other artist shops, small galleries, or similar portfolio-and-store sites without starting from scratch.
+
+Built as an academic project using **Vue 3**, **Express**, and **MongoDB**.
 
 ---
 
-## Highlights
+## Two sides, one platform
 
-- **Public site** — Browse products by slug; product detail with title, description, images, price, and stock.
-- **Admin workspace** — Session-based authentication; product CRUD with R2 image upload (create & edit); soft-delete and visibility toggles.
-- **Stripe-ready catalog** — Products store `stripe_product_id` / `stripe_price_id` and `currency` for a future Checkout integration (prices always loaded from the database server-side).
-- **AI-assisted captions** — LangGraph workflow: normalize input, inject user-“hearted” example lines (in-memory), call Ollama, **validate** structured JSON with **Zod**, retry on recoverable failures.
+### Front face — the storefront
+
+This is what the public sees: a polished ecommerce site end to end.
+
+- Product gallery and detail pages
+- Shopping cart and **Stripe Checkout** (real payments, inventory, order records)
+- Contact form and order confirmation
+- Fully styled public pages — home, gallery, product, checkout, contact
+
+Everything needed to **sell online** is wired up: prices and stock live in the database, checkout goes through Stripe, and paid orders land in MongoDB for fulfillment.
+
+### Admin side — run the business
+
+Hidden behind login (`/admin/login`), the admin is a separate workspace for the owner:
+
+- **Dashboard** — earnings, active listings, recent orders
+- **Listings** — create, edit, upload images (Cloudflare R2), toggle visibility
+- **Orders** — paid orders with fulfillment workflow (New Order → Shipped → Completed → Cancelled)
+- **Customize** — site content and presentation
+- **Settings** — links, contact details, and configuration
+- **AI** — Instagram caption generator (see below)
+
+The admin panel is designed to be **adaptable**. The same architecture supports different brands, product types, and site copy — making it a practical starting point for other similar ecommerce sites, not just this one artist.
+
+---
+
+## AI assistant — the standout feature
+
+The admin includes a built-in **AI content assistant** for social media. It is not a generic chatbot — it is trained on *your* brand over time.
+
+**How it learns your voice**
+- Set brand identity, what to emphasize, and what to avoid — saved in MongoDB and injected into every generation
+- Heart lines you like (hooks, captions, CTAs) — stored as few-shot examples the agent pulls on future runs
+- The more you refine preferences, the closer output gets to your actual writing style
+
+**What it generates per post**
+- Opening hooks
+- Full captions
+- Calls to action
+- Hashtag sets
+
+**Per-post controls:** tone (Poetic, Simple, Luxury, …) and focus (Engagement, Sell, Story, …) on top of your saved voice profile.
+
+**Under the hood:** a LangGraph agent calls Ollama, returns structured JSON, validates with Zod, and retries on recoverable failures. The agent fetches your voice profile and preferred examples via tool calls — you do not paste the same context every time.
+
+Admin → **AI** · Code: `server/ai/`, `server/routes/aiIg.js`
+
+---
+
+## What you get (summary)
+
+**Complete ecommerce**
+- Browse → cart → Stripe payment → order stored → admin fulfillment
+- Prices and inventory always from MongoDB (never trusted from the browser)
+- Idempotent order recording via Stripe webhook and/or order-success page
+
+**Customizable admin template**
+- Reusable back-office for similar portfolio/store sites
+- Product CRUD, image uploads, order management, site customization
+
+**AI-powered marketing**
+- Brand-aware caption generation with learning from saved preferences and hearted examples
 
 ---
 
 ## Tech stack
 
-| Layer | Technologies |
-|--------|----------------|
+| Layer | Stack |
+|--------|--------|
 | Frontend | Vue 3, Vue Router, Vite |
 | Backend | Node.js, Express 5 |
-| Data | MongoDB, Mongoose |
-| Auth | express-session (cookie), salted password hashing (Node `crypto` / scrypt) |
-| AI | LangGraph, LangChain tools, Ollama client, Zod |
+| Database | MongoDB, Mongoose |
+| Auth | Cookie sessions (`express-session`), scrypt password hashing |
+| Payments | Stripe Checkout |
+| Images | Cloudflare R2 |
+| Email | Resend |
+| AI | **LangGraph agent**, Ollama, Zod — brand-aware caption generation |
 
 ---
 
-## Getting started
+## Quick start
 
-**Prerequisites:** Node.js, MongoDB, and for AI features an **Ollama** runtime reachable from the server (defaults are overridable via environment variables).
+**You need:** Node.js, MongoDB, and (for **AI features**) a running Ollama instance.
 
-1. Clone the repo and install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-2. Configure environment variables (e.g. `.env`): **MongoDB connection string**, **session secret**, **`ADMIN_USERNAME`** / **`ADMIN_PASSWORD`** and optional **`ADMIN_MASTER_USERNAME`** (default `admin`) / **`ADMIN_MASTER_PASSWORD`** (all synced to admin users in MongoDB on server start), **`STRIPE_SECRET_KEY`**, **`STRIPE_WEBHOOK_SECRET`**, **`CLIENT_URL`** (e.g. `http://localhost:5173`), **Cloudflare R2** (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_ENDPOINT`, `R2_PUBLIC_URL`) for admin image uploads, **`RESEND_API_KEY`** (and optional **`NOTIFICATION_EMAIL`** / **`RESEND_FROM_EMAIL`**) for the contact form, and optionally **`OLLAMA_HOST`** / **`OLLAMA_MODEL`**.
-
-   For local Stripe webhooks: `stripe listen --forward-to localhost:3000/api/webhooks/stripe` and use the printed signing secret as `STRIPE_WEBHOOK_SECRET`.
-
-3. If upgrading from the old artwork/product-type schema, run the one-time migration:
-
-   ```bash
-   node server/scripts/migrate-to-simple-catalog.js
-   ```
-
-4. Run services:
-
-   | Command | Purpose |
-   |---------|---------|
-   | `npm run server` | API only (`server/server.js`) |
-   | `npm run dev` | Vite dev server (frontend) |
-   | `npm run dev:all` | API + frontend concurrently |
-   | `npm run build` | Production build of the Vue app |
-
-5. **Admin access** — not linked on the public site. Bookmark or open directly:
-
-   - Sign in: `/admin/login`
-   - After login: `/admin/dashboard` (hamburger menu: Dashboard, Orders, Listing, Customize, AI, Settings)
-
-   Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` in the environment (synced to MongoDB on server start). Optional **`ADMIN_MASTER_USERNAME`** (default `admin`) and **`ADMIN_MASTER_PASSWORD`** create a second admin account in MongoDB for backup access. `robots.txt` disallows `/admin` for crawlers.
-
----
-
-## Domain model
-
-- **Product** — Sellable listing: title, slug, description, price (cents), currency, inventory, optional format/size/year, Stripe IDs, visibility, soft-delete.
-- **Product image** — Image URL, sort order, primary flag, alt text.
-- **Order** — Paid checkout record (customer, Stripe session/intent IDs, totals, addresses, embedded `stripe_snapshot` with customer/shipping/amounts at payment time).
-- **Order item** — Snapshot of purchased line (catalog title/price plus optional Stripe line name/amounts).
-- **Admin user** — Username and password hash for back-office access.
-- **Preferred copy (AI)** — Up to five “liked” hooks, captions, and CTAs per category, stored **in server memory**; cleared on server restart.
-
----
-
-## API overview
-
-All routes under **`/api/admin/*`** except session login require an authenticated session (session cookie).
-
-### Public (no login)
-
-| Method | Route | Description |
-|--------|--------|-------------|
-| `GET` | `/api/products` | Product gallery (active, not deleted) |
-| `GET` | `/api/product/:slug` | Single product with images |
-| `POST` | `/api/checkout/create-session` | Create Stripe Checkout Session (body: `items[]` with `product_id`, `quantity` only) |
-| `POST` | `/api/webhooks/stripe` | Stripe webhook (raw body; `checkout.session.completed`) |
-| `POST` | `/api/contact` | Contact form → Resend email to owner (`{ name, email, subject, message }`) |
-| `GET` | `/api/orders/checkout-session/:sessionId` | Paid session summary for order-success page; **also records** the order in MongoDB |
-
-### Session
-
-| Method | Route | Description |
-|--------|--------|-------------|
-| `POST` | `/api/admin/session/login` | Login (username + password) |
-| `GET` | `/api/admin/session` | Current session |
-| `POST` | `/api/admin/session/logout` | Logout |
-
-### Admin — products
-
-| Method | Route | Description |
-|--------|--------|-------------|
-| `GET` | `/api/admin/products` | List products |
-| `POST` | `/api/admin/products` | Create product (optional `images[]`) |
-| `GET` | `/api/admin/products/:id` | Product detail |
-| `PUT` | `/api/admin/products/:id` | Update product (optional `images[]` replaces all images) |
-| `DELETE` | `/api/admin/products/:id` | Soft-delete product |
-| `PATCH` | `/api/admin/products/:id/toggle-active` | Toggle visibility |
-| `POST` | `/api/admin/upload-image` | Multipart upload (`image` field) → R2; returns `{ image_url }` |
-| `GET` | `/api/admin/dashboard` | Dashboard stats (total earned, active listings, new orders) |
-| `GET` | `/api/admin/orders` | List paid orders (MongoDB only — no Stripe calls) |
-| `PATCH` | `/api/admin/orders/:id/fulfillment-status` | Update fulfillment status (`new_order`, `processing`, `shipped`, `completed`, `cancelled`) |
-
-Admin listing photos are uploaded to **Cloudflare R2** (`products/{uuid}.ext`), then persisted as `product_images.image_url` via `images[]` on create (`POST`) or full replace on update (`PUT`). Requires all `R2_*` env vars; the bucket (or custom domain behind `R2_PUBLIC_URL`) must serve objects publicly.
-
-### Checkout (Stripe)
-
-`POST /api/checkout/create-session` accepts:
-
-```json
-{ "items": [{ "product_id": "<ObjectId>", "quantity": 1 }] }
+```bash
+git clone https://github.com/michael-d-abraham/artist-portfolio-store.git
+cd artist-portfolio-store
+npm install
+cp .env.example .env   # then fill in values
+npm run dev:all        # API on :3000 + frontend on :5173
 ```
 
-The server loads each product from MongoDB, validates active/not-deleted/stock, builds Stripe `line_items` from **database** `price_cents`, title, and image, and returns `{ "url": "<stripe checkout url>", "sessionId": "cs_..." }`.
+| Command | What it does |
+|---------|----------------|
+| `npm run dev:all` | Run API + frontend together (best for local dev) |
+| `npm run server` | API only |
+| `npm run dev` | Frontend only |
+| `npm run build` | Production build of the Vue app |
+| `npm start` | Production API (serves built frontend if present) |
+| `npm test` | Run Jest tests |
 
-Paid orders are stored in MongoDB when Stripe confirms payment, via either:
+**Admin login:** open `/admin/login`. Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` in `.env` — they sync to MongoDB on server start. An optional master admin (`ADMIN_MASTER_USERNAME` / `ADMIN_MASTER_PASSWORD`) can be configured the same way.
 
-1. **Stripe webhook** — `checkout.session.completed` → `POST /api/webhooks/stripe`
-2. **Order success page** — `GET /api/orders/checkout-session/:sessionId` after redirect (works without webhook, e.g. local dev)
+---
 
-Both paths call the same idempotent `recordCompletedStoreOrder` logic: creates **Order** + **OrderItem** snapshots (with Stripe customer/address/line-item snapshot), decrements `quantity_available`, keyed by `stripe_checkout_session_id`. Admin **Orders** reads only from MongoDB.
+## Environment variables
 
-**Production:** configure a Stripe webhook endpoint to `https://your-domain/api/webhooks/stripe` with `checkout.session.completed` and set `STRIPE_WEBHOOK_SECRET`. **Local:** run `stripe listen --forward-to localhost:3000/api/webhooks/stripe` or rely on the order-success API after each test checkout.
+Copy `.env.example` and fill in what you need. Grouped by feature:
 
-**Stripe Checkout flow (matches [Stripe’s guide](https://docs.stripe.com/checkout/quickstart)):**
+**Core**
+- `MONGO_STRING`, `DB_NAME` — MongoDB connection
+- `SESSION_SECRET` — session cookie signing
+- `CLIENT_URL` — frontend URL (e.g. `http://localhost:5173`); must match Vite in dev
 
-1. Customer reviews order at `/checkout` (preview only — prices loaded from API for display).
-2. Clicks **Checkout** → `POST /api/create-checkout-session` with `{ items: [{ product_id, quantity }] }` only.
-3. Server creates a Session (`mode: payment`, `price_data` or `stripe_price_id` from DB) and returns `{ url }`.
-4. Browser redirects to Stripe-hosted Checkout (`window.location.href = url`).
-5. After payment, Stripe redirects to `/order-success?session_id=…`; the page calls `GET /api/orders/checkout-session/:sessionId` (summary for the UI and **persists** the order to MongoDB). Cancel goes to `/checkout/cancel`.
+**Admin**
+- `ADMIN_USERNAME`, `ADMIN_PASSWORD`
+- `ADMIN_MASTER_USERNAME`, `ADMIN_MASTER_PASSWORD` (optional backup account)
 
+**Stripe**
+- `STRIPE_SECRET_KEY` — secret key (`sk_test_...`), not publishable
+- `STRIPE_WEBHOOK_SECRET` — from Stripe CLI or dashboard
+
+Local webhooks:
+```bash
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+```
 Test card: `4242 4242 4242 4242`.
 
-**Order success troubleshooting**
+**Image uploads (admin)**
+- `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_ENDPOINT`, `R2_PUBLIC_URL`
 
-1. After payment, the browser URL must be `/order-success?session_id=cs_test_...` (not bare `/order-success`, not literal `{CHECKOUT_SESSION_ID}`).
-2. `CLIENT_URL` in `.env` must match the Vite URL in your terminal (e.g. `http://localhost:5174` if port 5173 is in use). Restart the server after changing it.
-3. On checkout, the server logs `[checkout] success_url:` in dev — confirm it ends with `session_id={CHECKOUT_SESSION_ID}`.
-4. DevTools on `/order-success` should log `sessionId from URL: cs_test_...`.
-5. Test the API directly: `curl http://localhost:3000/api/orders/checkout-session/cs_test_YOUR_ID`.
+**Contact form**
+- `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `NOTIFICATION_EMAIL` (optional)
 
-### Admin — Instagram helper
-
-| Method | Route | Description |
-|--------|--------|-------------|
-| `POST` | `/api/admin/ai/generate-ig` | Body: product/listing description + optional voice / tone / focus |
-| `POST` | `/api/admin/ai/save-preferred` | Save a “hearted” line for future prompt conditioning |
+**AI captions (required for Admin → AI)**
+- `OLLAMA_HOST`, `OLLAMA_MODEL` — defaults work if Ollama runs locally
 
 ---
 
-## Database (high level)
+## How checkout works (ecommerce flow)
 
-Models live under **`server/models/`**:
+This is a **full checkout pipeline**, not a demo cart.
 
-- **products** — Title, unique slug, description, `price_cents`, `currency`, `quantity_available`, optional `format`, `size_label`, `year_created`, `stripe_product_id`, `stripe_price_id`, `is_active`, `deleted_at`, timestamps.
-- **product_images** — Reference product, URL, ordering, primary flag, alt text, soft-delete.
-- **orders** — Customer, Stripe IDs, status enums, cent totals, address subdocs.
-- **order_items** — Order reference, optional product reference, snapshot fields for fulfillment.
-- **adminusers** — Admin credentials.
+1. Customer adds items on `/checkout` (prices loaded from the API for display only).
+2. Frontend calls `POST /api/checkout/create-session` with `{ items: [{ product_id, quantity }] }`.
+3. Server validates stock and builds Stripe line items from **database** prices.
+4. Customer pays on Stripe-hosted Checkout.
+5. After payment, the order is saved to MongoDB via:
+   - Stripe webhook (`checkout.session.completed`), and/or
+   - `GET /api/orders/checkout-session/:sessionId` on the order-success page
+
+Both paths use the same idempotent logic — safe to run twice. Admin orders are read from MongoDB only.
+
+**Local dev tip:** if webhooks are awkward, the order-success page alone can record orders after each test checkout. Make sure `CLIENT_URL` matches your Vite port.
 
 ---
 
-## Instagram AI pipeline
+## Project layout
 
-Administrators describe a piece in plain language (and optional stylistic constraints). The server:
+```
+frontend/src/
+  pages/               Public storefront (front face)
+  pages/admin/         Admin workspace (dashboard, listings, orders, AI, …)
+server/
+  models/              Mongoose schemas (Product, Order, AiVoiceProfile, …)
+  routes/              Express route handlers
+  services/            Business logic (orders, checkout, dashboard)
+  ai/                  LangGraph workflow, tools, schemas — AI caption engine
+tests/                 Jest API tests
+```
 
-1. Normalizes context and loads saved preferred examples from memory.
-2. Builds a single structured prompt and calls **Ollama** once per attempt.
-3. Parses the reply as JSON and enforces shape with **Zod**.
-4. Retries up to a small cap when the failure is a recoverable parse/validation issue.
+**Main data models**
+- **Product** — listing with price, stock, Stripe IDs, images, visibility
+- **Order / OrderItem** — paid checkout with customer snapshot and line items
+- **AiVoiceProfile** — brand preferences the AI agent uses on every run
+- **AiPreferredExample** — hearted hooks, captions, CTAs (up to 5 per type)
 
-Implementation: **`server/ai/`** and **`server/routes/aiIg.js`**.
+---
+
+## API reference
+
+All `/api/admin/*` routes require a logged-in session except `POST /api/admin/session/login`.
+
+<details>
+<summary><strong>Public routes</strong></summary>
+
+| Method | Route | Purpose |
+|--------|--------|---------|
+| `GET` | `/api/products` | Active product gallery |
+| `GET` | `/api/product/:slug` | Single product + images |
+| `POST` | `/api/checkout/create-session` | Start Stripe Checkout |
+| `POST` | `/api/webhooks/stripe` | Stripe webhook handler |
+| `POST` | `/api/contact` | Contact form → email |
+| `GET` | `/api/orders/checkout-session/:sessionId` | Order summary + persist to DB |
+
+</details>
+
+<details>
+<summary><strong>Admin — products & orders</strong></summary>
+
+| Method | Route | Purpose |
+|--------|--------|---------|
+| `GET` | `/api/admin/dashboard` | Stats (earnings, listings, recent orders) |
+| `GET/POST/PUT/DELETE` | `/api/admin/products` | Product CRUD |
+| `PATCH` | `/api/admin/products/:id/toggle-active` | Show/hide listing |
+| `POST` | `/api/admin/upload-image` | Upload image → R2 |
+| `GET` | `/api/admin/orders` | List paid orders |
+| `PATCH` | `/api/admin/orders/:id/fulfillment-status` | Update status |
+
+Fulfillment statuses: `new_order`, `shipped`, `completed`, `cancelled`.
+
+</details>
+
+<details>
+<summary><strong>Admin — AI (caption assistant)</strong></summary>
+
+| Method | Route | Purpose |
+|--------|--------|---------|
+| `POST` | `/api/admin/ai/generate-ig` | Generate hooks, captions, CTAs, hashtags |
+| `POST` | `/api/admin/ai/save-preferred` | Save a hearted line for future generations |
+| `GET/PUT` | `/api/admin/ai/voice-profile` | Read/update brand voice preferences |
+
+The agent loads voice profile and preferred examples automatically via tool calls during generation.
+
+</details>
+
+---
+
+## Migration
+
+If upgrading from an older artwork/product-type schema:
+
+```bash
+npm run migrate:catalog
+```
 
 ---
 
