@@ -26,5 +26,4 @@ logs/
 *.log
 npm-debug.log*
 
-# Test / tooling
-.nyc_output/
+*.mov

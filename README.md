@@ -1,63 +1,32 @@
 # Artist Portfolio Store
 
-**A full-stack e-commerce platform built for independent artists.**
+**A full-stack e-commerce platform for artists and creators.**
 
-**Live site:** [artist-portfolio-store.onrender.com](https://artist-portfolio-store.onrender.com)
+**Live Site:** https://artist-portfolio-store.onrender.com
 
 > Hosted on Render. First load after idle may take ~20 seconds while the server spins up.
 
-This project began as a website for my brother's artwork, but evolved into a reusable platform that is completely customizable — the same build has been adapted for other artists (including a tattoo artist) without changing the underlying code.
+Originally built for my brother's artwork, this project evolved into a reusable platform that combines an online storefront, business management tools, and an AI-powered marketing assistant in a single application.
 
-The platform combines three things in one app:
+### Features
 
-- **Public storefront** — gallery, cart, checkout, contact
-- **Admin workspace** — products, orders, analytics, site customization
-- **AI marketing assistant** — brand-aware Instagram copy generation
-
-Unlike a typical portfolio site, the platform handles the entire workflow:
-
-* Browse artwork and collections
-* Purchase through Stripe Checkout
-* Manage inventory and orders
-* Customize site content without code changes
-* Generate social media content with AI
+- Sell artwork through Stripe Checkout
+- Manage products, inventory, and orders
+- Customize site content through an admin portal
+- Generate brand-aware social media content with AI
 
 ### Highlights
 
-* Full e-commerce platform built from scratch
-* Stripe payment processing and order fulfillment
-* Custom admin dashboard for managing products, orders, and site content
-* AI-powered Instagram content assistant using LangGraph and Ollama
-* Brand-aware AI that learns from user preferences and saved examples
-* Cloudflare R2 image storage and management
-* Responsive design for desktop and mobile
-* Reusable architecture that can be adapted for other artists and small businesses
+- Full-stack e-commerce platform built from scratch
+- Custom CMS and admin dashboard
+- AI marketing assistant using LangGraph and Ollama
+- Cloudflare R2 image management
+- Responsive design for desktop and mobile
+- Reusable architecture for artists and small businesses
 
 ### Tech Stack
 
-Vue 3 · Node.js · Express · MongoDB · Stripe · Cloudflare R2 · LangGraph · Ollama · Zod
-
-### Architecture
-
-The application is split into two experiences:
-
-**Storefront**
-
-* Product gallery
-* Product pages
-* Shopping cart
-* Checkout
-* Contact forms
-
-**Admin Portal**
-
-* Product management
-* Order fulfillment
-* Site customization
-* Analytics dashboard
-* AI content generation
-
-Both experiences share a common backend and database while remaining completely separate from the user's perspective.
+Vue 3 · Node.js · Express · MongoDB · Stripe · Cloudflare R2 · LangGraph · Ollama
 
 ---
 
@@ -69,33 +38,33 @@ Walkthroughs of the live product — storefront, admin, checkout flow, AI agent,
 
 A quick tour of the public site: browsing the gallery, viewing product detail, adding to cart, and completing payment through **Stripe Checkout**. Prices and inventory always come from the server — the browser never controls what gets charged.
 
-<video src="./images/Userfacing.mov" controls width="100%"></video>
+<video src="./images/userfacing.mp4" controls width="100%"></video>
 
-[Download video](./images/Userfacing.mov)
+[Download video](./images/userfacing.mp4)
 
 ### 2. Admin dashboard
 
 Overview of the private admin workspace: earnings, active listings, recent orders, and how the layout responds on different screen sizes. Everything the owner needs to run the shop lives here — no separate tools required.
 
-<video src="./images/DashboardOverview.mov" controls width="100%"></video>
+<video src="./images/dashboard-overview.mp4" controls width="100%"></video>
 
-[Download video](./images/DashboardOverview.mov)
+[Download video](./images/dashboard-overview.mp4)
 
 ### 3. Successful purchase → admin update
 
 End-to-end proof that commerce is wired up: a customer completes checkout, the **dashboard updates** with the new order, **inventory decrements**, and the **store owner receives an email** notification. One purchase triggers the full backend pipeline.
 
-<video src="./images/Succesfull%20purchaseAdmin.mov" controls width="100%"></video>
+<video src="./images/successful-purchase-admin.mp4" controls width="100%"></video>
 
-[Download video](./images/Succesfull%20purchaseAdmin.mov)
+[Download video](./images/successful-purchase-admin.mp4)
 
 ### 4. AI agentic caption flow
 
 The built-in marketing assistant in action. This is not a single prompt → text box — it is a **LangGraph agent** that calls tools to load the artist's saved voice profile and hearted examples, generates structured output (hooks, captions, CTAs, hashtags), and validates the response with **Zod** before returning it. The model decides when to fetch context; the app decides when output is valid.
 
-<video src="./images/ArtistsAgenticFlow.mov" controls width="100%"></video>
+<video src="./images/artists-agentic-flow.mp4" controls width="100%"></video>
 
-[Download video](./images/ArtistsAgenticFlow.mov)
+[Download video](./images/artists-agentic-flow.mp4)
 
 **What makes this impressive technically**
 
@@ -108,9 +77,9 @@ The built-in marketing assistant in action. This is not a single prompt → text
 
 Every major section of the public site — home hero, featured work, about copy, contact page labels, social links, and images — can be changed from **Admin → Customize**. Upload new photos, edit text, pick featured products, and preview changes without touching the codebase.
 
-<video src="./images/customize.mov" controls width="100%"></video>
+<video src="./images/customize.mp4" controls width="100%"></video>
 
-[Download video](./images/customize.mov)
+[Download video](./images/customize.mp4)
 
 ---
 
