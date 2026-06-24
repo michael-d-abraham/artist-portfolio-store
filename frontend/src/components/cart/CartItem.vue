@@ -12,7 +12,7 @@
       <div class="cart-item__top">
         <div class="cart-item__meta">
           <h3 class="cart-item__name">{{ item.name }}</h3>
-          <p class="cart-item__price">${{ unitPrice }}</p>
+          <p class="cart-item__price">{{ unitPrice }}</p>
           <p v-if="item.optionLabel" class="cart-item__option">{{ item.optionLabel }}</p>
         </div>
         <button
@@ -41,7 +41,7 @@
           @decrement="$emit('decrement')"
           @update:model-value="$emit('update:quantity', $event)"
         />
-        <p class="cart-item__line-total">${{ lineTotal }}</p>
+        <p class="cart-item__line-total">{{ lineTotal }}</p>
       </div>
     </div>
   </li>
@@ -50,7 +50,7 @@
 <script setup>
 import { computed } from 'vue';
 import QuantityStepper from './QuantityStepper.vue';
-import { formatUsdFromCents } from '../../utils/storefrontProduct.js';
+import { formatMoneyFromCents } from '../../utils/money.js';
 
 const props = defineProps({
   item: {
@@ -65,8 +65,8 @@ const props = defineProps({
 
 defineEmits(['remove', 'increment', 'decrement', 'update:quantity']);
 
-const unitPrice = computed(() => formatUsdFromCents(props.item.priceCents));
-const lineTotal = computed(() => formatUsdFromCents(props.lineTotalCents));
+const unitPrice = computed(() => formatMoneyFromCents(props.item.priceCents, 'usd'));
+const lineTotal = computed(() => formatMoneyFromCents(props.lineTotalCents, 'usd'));
 </script>
 
 <style scoped>

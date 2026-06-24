@@ -69,7 +69,7 @@ import { computed, watch, onUnmounted } from 'vue';
 import CartItem from './CartItem.vue';
 import CartFooter from './CartFooter.vue';
 import { useCart } from '../../composables/useCart.js';
-import { formatUsdFromCents } from '../../utils/storefrontProduct.js';
+import { formatMoneyFromCents } from '../../utils/money.js';
 
 const {
   items,
@@ -88,7 +88,7 @@ const {
   itemCountLabel
 } = useCart();
 
-const totalFormatted = computed(() => formatUsdFromCents(estimatedTotalCents.value));
+const totalFormatted = computed(() => formatMoneyFromCents(estimatedTotalCents.value, 'usd'));
 
 function onGoCheckout() {
   closeDrawer();

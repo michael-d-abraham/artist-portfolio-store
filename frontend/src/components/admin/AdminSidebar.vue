@@ -19,7 +19,7 @@
 
 <script setup>
 import { useRoute } from 'vue-router';
-import { ADMIN_NAV_ITEMS, isAdminNavActive } from '../../composables/adminNavItems.js';
+import { ADMIN_NAV_ITEMS, isAdminNavActive } from '../../constants/adminNavItems.js';
 
 const route = useRoute();
 const navItems = ADMIN_NAV_ITEMS;

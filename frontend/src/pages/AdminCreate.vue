@@ -70,6 +70,7 @@ import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { createAdminProduct } from '../services/api.js';
 import AdminProductImages, { buildProductImagesPayload } from '../components/admin/AdminProductImages.vue';
+import { dollarsToCents } from '../utils/money.js';
 
 const router = useRouter();
 
@@ -85,12 +86,6 @@ const form = reactive({
 const priceDollars = ref(0);
 const imageRows = ref([]);
 const primaryImageIndex = ref(0);
-
-function dollarsToCents(d) {
-  const n = Number(d);
-  if (!Number.isFinite(n) || n < 0) return NaN;
-  return Math.round(n * 100);
-}
 
 function buildImages() {
   return buildProductImagesPayload(imageRows.value, primaryImageIndex.value);

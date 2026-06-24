@@ -17,14 +17,10 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { getPublicSocialLinks } from '../../services/api.js';
+import { PLATFORM_LABELS } from '@shared/socialLinksDefaults.js';
 import SocialPlatformIcon from './SocialPlatformIcon.vue';
 
-const labels = {
-  youtube: 'YouTube',
-  instagram: 'Instagram',
-  tiktok: 'TikTok',
-  facebook: 'Facebook'
-};
+const labels = PLATFORM_LABELS;
 
 const links = ref([]);
 

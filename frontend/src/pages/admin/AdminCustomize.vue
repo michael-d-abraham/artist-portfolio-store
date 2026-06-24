@@ -6,17 +6,17 @@
 
     <section class="admin-float admin-float--padded">
       <h2 class="admin-float-card__title">Social</h2>
-      <AdminSocialLinks embedded />
+      <AdminSocialLinks />
     </section>
 
     <section class="admin-float admin-float--padded">
       <h2 class="admin-float-card__title">Contact page</h2>
-      <AdminDisplayPictures embedded />
+      <AdminDisplayPictures />
     </section>
 
     <section class="admin-float admin-float--padded">
       <h2 class="admin-float-card__title">Home page</h2>
-      <AdminHomePage embedded />
+      <AdminHomePage />
     </section>
   </div>
 </template>

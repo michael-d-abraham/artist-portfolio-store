@@ -161,7 +161,7 @@ async function createCheckoutSession(body) {
     const stripe = getStripe();
     const successUrl = checkoutSuccessUrl();
     const cancelUrl = checkoutCancelUrl();
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV === 'development') {
         console.log('[checkout] success_url:', successUrl);
         console.log('[checkout] cancel_url:', cancelUrl);
         console.log('[checkout] CLIENT_URL:', clientBaseUrl());

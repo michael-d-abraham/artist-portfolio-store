@@ -34,7 +34,7 @@ describe('GET /api/orders/checkout-session/:sessionId', () => {
         resetStripeMocks();
     });
 
-    it('records a paid order in MongoDB when the success page loads the session', async () => {
+    it('returns the paid session summary without mutating server state', async () => {
         const product = await createTestProduct({ quantity_available: 3, price_cents: 2000 });
         const session = buildPaidCheckoutSession(product._id, { id: SESSION_ID });
 
@@ -51,20 +51,13 @@ describe('GET /api/orders/checkout-session/:sessionId', () => {
         expect(res.body.session_id).toBe(SESSION_ID);
         expect(res.body.payment_status).toBe('paid');
 
-        const orders = await Order.find().lean();
-        expect(orders).toHaveLength(1);
-        expect(orders[0].stripe_checkout_session_id).toBe(SESSION_ID);
-        expect(orders[0].payment_status).toBe('paid');
-        expect(orders[0].stripe_snapshot).toBeTruthy();
-        expect(orders[0].stripe_snapshot.checkout_session_id).toBe(SESSION_ID);
-
-        const items = await OrderItem.find().lean();
-        expect(items).toHaveLength(1);
-        expect(items[0].product_id.toString()).toBe(String(product._id));
-        expect(await getProductStock(product._id)).toBe(2);
+        // The public GET is read-only: fulfillment happens in the Stripe webhook.
+        expect(await Order.countDocuments()).toBe(0);
+        expect(await OrderItem.countDocuments()).toBe(0);
+        expect(await getProductStock(product._id)).toBe(3);
     });
 
-    it('is idempotent when the success page is refreshed (one order, stock decremented once)', async () => {
+    it('never decrements stock no matter how many times the success page is refreshed', async () => {
         const product = await createTestProduct({ quantity_available: 5 });
         const session = buildPaidCheckoutSession(product._id, { id: SESSION_ID, quantity: 2 });
 
@@ -79,8 +72,8 @@ describe('GET /api/orders/checkout-session/:sessionId', () => {
         await request(app).get(url);
         await request(app).get(url);
 
-        expect(await Order.countDocuments()).toBe(1);
-        expect(await OrderItem.countDocuments()).toBe(1);
-        expect(await getProductStock(product._id)).toBe(3);
+        expect(await Order.countDocuments()).toBe(0);
+        expect(await OrderItem.countDocuments()).toBe(0);
+        expect(await getProductStock(product._id)).toBe(5);
     });
 });

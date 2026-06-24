@@ -1,3 +1,5 @@
+import { PLATFORM_LABELS } from '@shared/socialLinksDefaults.js';
+
 /** Display size in CSS px — CDN assets match this (2x for retina). */
 export const SOCIAL_ICON_DISPLAY_PX = 36;
 
@@ -6,13 +8,6 @@ const FILE_IDS = {
     instagram: '11062b_55e4be1e75564866b6c28290f9a9d271~mv2.png',
     tiktok: '11062b_69d309d6dbde492fae325fb0deca6556~mv2.png',
     facebook: '11062b_2381e8a6e7444f4f902e7b649aa3f0ac~mv2.png'
-};
-
-const LABELS = {
-    youtube: 'YouTube',
-    instagram: 'Instagram',
-    tiktok: 'TikTok',
-    facebook: 'Facebook'
 };
 
 function wixFillUrl(fileId, size) {
@@ -37,6 +32,6 @@ function buildIcon(fileId, alt) {
 export const SOCIAL_PLATFORM_ICONS = Object.fromEntries(
     Object.entries(FILE_IDS).map(([platform, fileId]) => [
         platform,
-        buildIcon(fileId, LABELS[platform])
+        buildIcon(fileId, PLATFORM_LABELS[platform])
     ])
 );

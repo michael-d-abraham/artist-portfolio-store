@@ -1,13 +1,14 @@
-export const FULFILLMENT_STATUS_OPTIONS = [
-    { value: 'new_order', label: 'New Order' },
-    { value: 'shipped', label: 'Shipped' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'cancelled', label: 'Cancelled' }
-];
+import {
+    FULFILLMENT_STATUSES,
+    FULFILLMENT_STATUS_LABELS
+} from '@shared/orderFulfillmentStatus.js';
 
-export const FULFILLMENT_STATUS_LABELS = Object.fromEntries(
-    FULFILLMENT_STATUS_OPTIONS.map((o) => [o.value, o.label])
-);
+export const FULFILLMENT_STATUS_OPTIONS = FULFILLMENT_STATUSES.map((value) => ({
+    value,
+    label: FULFILLMENT_STATUS_LABELS[value]
+}));
+
+export { FULFILLMENT_STATUS_LABELS };
 
 export function isNewOrder(status) {
     return status === 'new_order';

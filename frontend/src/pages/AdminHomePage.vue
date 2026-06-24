@@ -1,13 +1,5 @@
 <template>
-  <div class="admin-home" :class="{ 'admin-home--embedded': embedded }">
-    <header v-if="!embedded" class="admin-home__header">
-      <div>
-        <h1 class="page-title admin-home__title">Home page</h1>
-        <p class="admin-home__lead">Edit the home page layout below — same structure visitors see on the site.</p>
-      </div>
-      <router-link to="/admin/customize" class="admin-home__back">← Customize</router-link>
-    </header>
-
+  <div class="admin-home admin-home--embedded">
     <p v-if="loading" class="admin-home__status">Loading…</p>
     <p v-else-if="loadError" class="error admin-home__status">{{ loadError }}</p>
 
@@ -50,16 +42,7 @@ import {
 } from '../services/api.js';
 import AdminHomePagePreview from '../components/admin/AdminHomePagePreview.vue';
 import AdminPhotoUploadFlow from '../components/admin/AdminPhotoUploadFlow.vue';
-
-defineProps({
-  embedded: { type: Boolean, default: false }
-});
-
-const FEATURED_SLOTS = 6;
-
-function emptyFeatured() {
-  return { product_id: '' };
-}
+import { FEATURED_PRODUCT_SLOTS, emptyFeaturedProduct } from '@shared/homePageDefaults.js';
 
 function createEmptyForm() {
   return {
@@ -67,7 +50,7 @@ function createEmptyForm() {
     hero_subtitle: '',
     hero_image_url: '',
     featured_title: '',
-    featured_products: Array.from({ length: FEATURED_SLOTS }, emptyFeatured),
+    featured_products: Array.from({ length: FEATURED_PRODUCT_SLOTS }, emptyFeaturedProduct),
     about_title: '',
     about_header: '',
     about_text: '',
@@ -100,7 +83,7 @@ function applySettings(data) {
       data.about_image_url != null ? String(data.about_image_url).trim() : '';
 
     const featured = Array.isArray(data.featured_products) ? data.featured_products : [];
-    for (let i = 0; i < FEATURED_SLOTS; i++) {
+    for (let i = 0; i < FEATURED_PRODUCT_SLOTS; i++) {
       const row = featured[i] || {};
       next.featured_products[i] = {
         product_id: row.product_id != null ? String(row.product_id).trim() : ''
@@ -116,7 +99,7 @@ function applySettings(data) {
   form.about_header = next.about_header;
   form.about_text = next.about_text;
   form.about_image_url = next.about_image_url;
-  for (let i = 0; i < FEATURED_SLOTS; i++) {
+  for (let i = 0; i < FEATURED_PRODUCT_SLOTS; i++) {
     Object.assign(form.featured_products[i], next.featured_products[i]);
   }
 }
@@ -257,31 +240,6 @@ onMounted(load);
 
 .admin-home--embedded {
   margin: 0;
-}
-
-.admin-home__header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-md);
-  margin-bottom: var(--space-lg);
-}
-
-.admin-home__title {
-  margin-bottom: var(--space-xs);
-}
-
-.admin-home__lead {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-}
-
-.admin-home__back {
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-  text-decoration: none;
 }
 
 .admin-home__status {

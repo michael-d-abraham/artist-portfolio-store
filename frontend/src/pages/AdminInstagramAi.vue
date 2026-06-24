@@ -91,20 +91,17 @@
         <div class="field">
           <label for="tone">Tone</label>
           <select id="tone" v-model="tone">
-            <option value="Poetic">Poetic — emotional, artistic, expressive</option>
-            <option value="Simple">Simple — clear, short, easy to read</option>
-            <option value="Emotional">Emotional — feeling-focused, personal</option>
-            <option value="Sales">Sales — slightly persuasive, product-aware</option>
-            <option value="Luxury">Luxury — premium, collector-focused</option>
+            <option v-for="value in AI_TONE_VALUES" :key="value" :value="value">
+              {{ AI_TONE_LABELS[value] }}
+            </option>
           </select>
         </div>
         <div class="field">
           <label for="focus">Focus</label>
           <select id="focus" v-model="focus">
-            <option value="Engagement">Engagement — likes, comments, shares</option>
-            <option value="Sell">Sell — drive purchase or clicks</option>
-            <option value="Story">Story — tell meaning behind the piece</option>
-            <option value="Awareness">Awareness — just showcase the work</option>
+            <option v-for="value in AI_FOCUS_VALUES" :key="value" :value="value">
+              {{ AI_FOCUS_LABELS[value] }}
+            </option>
           </select>
         </div>
       </div>
@@ -193,6 +190,14 @@ import {
   getVoiceProfile,
   updateVoiceProfile
 } from '../services/api.js';
+import {
+  AI_TONE_VALUES,
+  AI_FOCUS_VALUES,
+  AI_TONE_DEFAULT,
+  AI_FOCUS_DEFAULT,
+  AI_TONE_LABELS,
+  AI_FOCUS_LABELS
+} from '@shared/aiGenerationOptions.js';
 
 // localStorage key for the voice profile cache (JSON object with all 3 fields).
 const VOICE_CACHE_KEY = 'igVoiceProfile';
@@ -207,8 +212,8 @@ let voiceSavedTimer = null;
 
 // ── Caption generation (Section 2) ───────────────────────────────────────────
 const userInput = ref('');
-const tone = ref('Simple');
-const focus = ref('Story');
+const tone = ref(AI_TONE_DEFAULT);
+const focus = ref(AI_FOCUS_DEFAULT);
 const generating = ref(false);
 const error = ref('');
 

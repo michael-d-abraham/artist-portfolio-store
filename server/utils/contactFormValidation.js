@@ -2,7 +2,7 @@ const MAX_NAME = 200;
 const MAX_SUBJECT = 300;
 const MAX_MESSAGE = 10000;
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const { isValidEmail } = require('../../shared/email');
 
 function isNonEmptyString(value) {
     return value != null && String(value).trim() !== '';
@@ -31,7 +31,7 @@ function validateContactFormBody(body) {
     if (!isNonEmptyString(email)) {
         return { ok: false, message: 'Email is required.' };
     }
-    if (!EMAIL_RE.test(email)) {
+    if (!isValidEmail(email)) {
         return { ok: false, message: 'Enter a valid email address.' };
     }
     if (!isNonEmptyString(subject)) {

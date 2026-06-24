@@ -1,7 +1,5 @@
 const { getStripe } = require('../utils/stripeClient');
 const { normalizeCheckoutSessionId } = require('../utils/stripeSessionId');
-const { sendPaidTransactionNotification } = require('./orderNotificationEmailService');
-const { recordCompletedStoreOrder } = require('./recordCompletedStoreOrder');
 
 function formatAddress(address) {
     if (!address || typeof address !== 'object') {
@@ -126,13 +124,8 @@ async function getCheckoutSessionSummary(sessionId) {
         lineItemsData = listed.data;
     }
 
-    const recordResult = await recordCompletedStoreOrder(id);
-    if (!recordResult.ok) {
-        console.error('recordCompletedStoreOrder from checkout summary', id, recordResult.error);
-    }
-
-    sendPaidTransactionNotification(id).catch(() => {});
-
+    // Read-only: order fulfillment + owner notification happen in the Stripe
+    // webhook (the source of truth). This public GET never mutates state.
     return {
         ok: true,
         summary: mapSessionSummary(session, lineItemsData)

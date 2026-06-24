@@ -1,4 +1,7 @@
 const { createApp } = require('./app');
+const { assertProductionConfig } = require('./sessionConfig');
+
+assertProductionConfig();
 
 require('./db');
 

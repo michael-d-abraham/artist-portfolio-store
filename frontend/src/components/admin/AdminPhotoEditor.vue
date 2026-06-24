@@ -67,6 +67,7 @@
 
         <footer class="photo-editor__footer">
           <button type="button" class="photo-editor__cancel" @click="onCancel">Cancel</button>
+          <span v-if="applyError" role="alert" class="photo-editor__apply-error">{{ applyError }}</span>
           <button type="button" class="btn-primary" :disabled="applying" @click="onApply">
             {{ applying ? 'Saving…' : applyLabel }}
           </button>
@@ -100,6 +101,7 @@ const VIEW_MARGIN = 0.58;
 
 const imageRef = ref(null);
 const applying = ref(false);
+const applyError = ref('');
 const dragMode = ref('move');
 const flipped = ref(false);
 let cropper = null;
@@ -257,6 +259,7 @@ function canvasToFile(canvas) {
 async function onApply() {
   if (!cropper || applying.value) return;
   applying.value = true;
+  applyError.value = '';
   try {
     const canvas = cropper.getCroppedCanvas({
       maxWidth: 1600,
@@ -269,7 +272,7 @@ async function onApply() {
     }
     emit('apply', await canvasToFile(canvas));
   } catch (err) {
-    console.error('photo editor apply', err);
+    applyError.value = err.message || 'Could not apply crop';
   } finally {
     applying.value = false;
   }
@@ -450,5 +453,12 @@ onBeforeUnmount(() => {
 
 .photo-editor__cancel:hover {
   color: #111;
+}
+
+.photo-editor__apply-error {
+  flex: 1;
+  font-size: 0.8125rem;
+  color: #c0392b;
+  text-align: center;
 }
 </style>

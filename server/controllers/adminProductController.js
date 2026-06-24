@@ -3,6 +3,7 @@ const { isValidObjectId } = require('../utils/objectIdValidation');
 const { normalizeSlug } = require('../utils/slugify');
 const { buildUniqueProductSlug } = require('../utils/productSlug');
 const {
+    parseYearCreated,
     validateProductCreateBody,
     validateProductUpdateBody
 } = require('../utils/productValidation');
@@ -29,19 +30,6 @@ function normalizeNullableStringInput(value) {
     }
     const t = String(value).trim();
     return t || null;
-}
-
-function parseYearCreated(value) {
-    if (value === undefined) {
-        return { ok: true, value: undefined };
-    }
-    if (value === null) {
-        return { ok: true, value: null };
-    }
-    if (typeof value !== 'number' || !Number.isInteger(value)) {
-        return { ok: false, error: 'year_created must be an integer or null' };
-    }
-    return { ok: true, value };
 }
 
 async function getAdminProductDetailById(id) {

@@ -10,7 +10,8 @@ export default defineConfig({
     plugins: [vue()],
     resolve: {
         alias: {
-            '@': path.join(__dirname, 'frontend', 'src')
+            '@': path.join(__dirname, 'frontend', 'src'),
+            '@shared': path.join(__dirname, 'shared')
         }
     },
     preview: {

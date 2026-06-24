@@ -135,9 +135,6 @@ const order = ref(null);
 function readSessionIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const id = params.get('session_id');
-  if (import.meta.env.DEV) {
-    console.log('sessionId from URL:', id);
-  }
   return id && String(id).trim() ? String(id).trim() : '';
 }
 

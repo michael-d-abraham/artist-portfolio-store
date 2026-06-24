@@ -56,6 +56,7 @@
 import { ref, onMounted } from 'vue';
 import { getPublicContactHero, submitContactForm } from '../services/api.js';
 import { applyContactPageDefaults } from '../constants/contactPageDefaults.js';
+import { isValidEmail } from '@shared/email.js';
 
 const heroImageUrl = ref('');
 const showHeroImage = ref(true);
@@ -78,7 +79,7 @@ const submitError = ref('');
 function validateForm() {
   if (!String(name.value).trim()) return 'Name is required.';
   if (!String(email.value).trim()) return 'Email is required.';
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email.value).trim())) {
+  if (!isValidEmail(String(email.value).trim())) {
     return 'Enter a valid email address.';
   }
   if (!String(subject.value).trim()) return 'Subject is required.';

@@ -59,7 +59,7 @@
             <dl class="admin-mobile-card__meta admin-mobile-card__meta--stats-row">
             <div class="admin-mobile-card__stat">
               <dt>Price</dt>
-              <dd>${{ formatPrice(p.price_cents) }}</dd>
+              <dd>{{ formatPrice(p.price_cents) }}</dd>
             </div>
             <div class="admin-mobile-card__stat">
               <dt>Stock</dt>
@@ -99,7 +99,7 @@
                 </div>
               </td>
               <td class="admin-data-table__title-cell">{{ p.title }}</td>
-              <td class="admin-data-table__cell--nowrap">${{ formatPrice(p.price_cents) }}</td>
+              <td class="admin-data-table__cell--nowrap">{{ formatPrice(p.price_cents) }}</td>
               <td>{{ p.quantity_available ?? '—' }}</td>
               <td>
                 <span
@@ -137,8 +137,8 @@ import {
   deleteAdminProduct,
   toggleAdminProductActive
 } from '../../services/api.js';
+import { formatMoneyFromCents } from '../../utils/money.js';
 import {
-  formatUsdFromCents,
   primaryProductImageUrl,
   productTitle
 } from '../../utils/storefrontProduct.js';
@@ -155,7 +155,7 @@ const openMenuId = ref(null);
 const sortedItems = computed(() => sortProducts(items.value, sortBy.value));
 
 function formatPrice(cents) {
-  return formatUsdFromCents(cents);
+  return formatMoneyFromCents(cents, 'usd');
 }
 
 function thumbUrl(product) {

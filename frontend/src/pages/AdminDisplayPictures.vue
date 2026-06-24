@@ -1,13 +1,5 @@
 <template>
-  <div class="admin-display" :class="{ 'admin-display--embedded': embedded }">
-    <header v-if="!embedded" class="admin-display__header">
-      <div>
-        <h1 class="page-title admin-display__title">Contact page</h1>
-        <p class="admin-display__lead">Preview matches the live Contact page — click labels, title, or button text to edit.</p>
-      </div>
-      <router-link to="/admin/listings" class="admin-display__back">← Listing</router-link>
-    </header>
-
+  <div class="admin-display admin-display--embedded">
     <p v-if="loading" class="admin-display__status">Loading…</p>
     <p v-else-if="loadError" class="error admin-display__status">{{ loadError }}</p>
 
@@ -53,10 +45,6 @@ import {
 import { applyContactPageDefaults } from '../constants/contactPageDefaults.js';
 import AdminContactPagePreview from '../components/admin/AdminContactPagePreview.vue';
 import AdminPhotoUploadFlow from '../components/admin/AdminPhotoUploadFlow.vue';
-
-defineProps({
-  embedded: { type: Boolean, default: false }
-});
 
 const form = reactive(applyContactPageDefaults({}));
 const loading = ref(true);
@@ -172,35 +160,6 @@ onMounted(load);
 
 .admin-display--embedded {
   margin: 0;
-}
-
-.admin-display__header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-md);
-  margin-bottom: var(--space-xl);
-}
-
-.admin-display__title {
-  margin-bottom: var(--space-xs);
-}
-
-.admin-display__lead {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-}
-
-.admin-display__back {
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-.admin-display__back:hover {
-  color: var(--color-text);
 }
 
 .admin-display__status {

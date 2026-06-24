@@ -25,6 +25,7 @@ const {
     savePreferredRequestSchema,
     voiceProfileUpdateSchema
 } = require('../server/ai/schemas');
+const { AI_TONE_VALUES, AI_FOCUS_VALUES } = require('../shared/aiGenerationOptions');
 
 let app;
 
@@ -91,10 +92,8 @@ describe('Schema validation', () => {
         });
 
         it('accepts all valid tone and focus combinations', () => {
-            const tones = ['Poetic', 'Simple', 'Emotional', 'Sales', 'Luxury'];
-            const focuses = ['Engagement', 'Sell', 'Story', 'Awareness'];
-            for (const tone of tones) {
-                for (const focus of focuses) {
+            for (const tone of AI_TONE_VALUES) {
+                for (const focus of AI_FOCUS_VALUES) {
                     expect(
                         generationRequestSchema.safeParse({ userInput: 'x', tone, focus }).success
                     ).toBe(true);

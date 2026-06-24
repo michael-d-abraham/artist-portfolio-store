@@ -32,7 +32,7 @@
 <script setup>
 import { useRoute } from 'vue-router';
 import { useAdminNav } from '../../composables/useAdminNav.js';
-import { ADMIN_NAV_ITEMS, isAdminNavActive } from '../../composables/adminNavItems.js';
+import { ADMIN_NAV_ITEMS, isAdminNavActive } from '../../constants/adminNavItems.js';
 
 const route = useRoute();
 const { adminMenuOpen, closeAdminMenu } = useAdminNav();

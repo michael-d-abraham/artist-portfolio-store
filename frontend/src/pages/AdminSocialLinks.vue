@@ -1,13 +1,5 @@
 <template>
-  <div class="admin-social" :class="{ 'admin-social--embedded': embedded }">
-    <header v-if="!embedded" class="admin-social__header">
-      <div>
-        <h1 class="page-title admin-social__title">Links</h1>
-        <p class="admin-social__lead">Contact email and social profiles for the site.</p>
-      </div>
-      <router-link to="/admin/listings" class="admin-social__back">← Listing</router-link>
-    </header>
-
+  <div class="admin-social admin-social--embedded">
     <p v-if="loading" class="admin-social__status">Loading…</p>
     <p v-else-if="loadError" class="error admin-social__status">{{ loadError }}</p>
 
@@ -76,25 +68,32 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue';
 
-defineProps({
-  embedded: { type: Boolean, default: false }
-});
 import { getAdminSocialLinks, updateAdminSocialLinks } from '../services/api.js';
 import SocialPlatformIcon from '../components/social/SocialPlatformIcon.vue';
+import {
+  PLATFORMS,
+  DEFAULT_SOCIAL_LINKS,
+  PLATFORM_LABELS
+} from '@shared/socialLinksDefaults.js';
 
-const platforms = [
-  { id: 'youtube', label: 'YouTube', placeholder: 'https://www.youtube.com/@channel' },
-  { id: 'instagram', label: 'Instagram', placeholder: 'https://www.instagram.com/handle' },
-  { id: 'tiktok', label: 'TikTok', placeholder: 'https://www.tiktok.com/@handle' },
-  { id: 'facebook', label: 'Facebook', placeholder: 'https://www.facebook.com/page' }
-];
+const PLATFORM_PLACEHOLDERS = {
+  youtube: 'https://www.youtube.com/@channel',
+  instagram: 'https://www.instagram.com/handle',
+  tiktok: 'https://www.tiktok.com/@handle',
+  facebook: 'https://www.facebook.com/page'
+};
 
-const form = reactive({
-  youtube: { url: 'https://www.youtube.com/', enabled: true },
-  instagram: { url: 'https://www.instagram.com/', enabled: true },
-  tiktok: { url: 'https://www.tiktok.com/', enabled: true },
-  facebook: { url: 'https://www.facebook.com/', enabled: true }
-});
+const platforms = PLATFORMS.map((id) => ({
+  id,
+  label: PLATFORM_LABELS[id],
+  placeholder: PLATFORM_PLACEHOLDERS[id]
+}));
+
+const form = reactive(
+  Object.fromEntries(
+    PLATFORMS.map((id) => [id, { ...DEFAULT_SOCIAL_LINKS[id] }])
+  )
+);
 
 const contactEmail = ref('');
 const contactEmailError = ref('');
@@ -103,12 +102,9 @@ const loadError = ref('');
 const submitError = ref('');
 const saved = ref(false);
 const submitting = ref(false);
-const fieldErrors = reactive({
-  youtube: '',
-  instagram: '',
-  tiktok: '',
-  facebook: ''
-});
+const fieldErrors = reactive(
+  Object.fromEntries(PLATFORMS.map((id) => [id, '']))
+);
 
 function applySettings(data) {
   contactEmail.value =
@@ -189,43 +185,6 @@ async function onSubmit() {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-}
-
-.admin-social__header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-md);
-  padding-bottom: var(--space-md);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.admin-social__title {
-  margin: 0 0 0.25rem;
-  text-align: left;
-}
-
-.admin-social__lead {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-  line-height: 1.4;
-}
-
-.admin-social__back {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-  color: var(--color-text-muted);
-}
-
-.admin-social__back:hover {
-  color: var(--color-text);
 }
 
 .admin-social__status {

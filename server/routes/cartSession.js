@@ -1,4 +1,5 @@
 const express = require('express');
+const { clampCartQuantity } = require('../../shared/cartQuantity');
 
 const router = express.Router();
 
@@ -11,7 +12,7 @@ function normalizeCartItems(raw) {
         .map((line) => ({
             productId: String(line.productId).trim(),
             slug: line.slug != null ? String(line.slug).trim() : '',
-            quantity: Math.max(1, Math.min(99, Number(line.quantity) || 1))
+            quantity: clampCartQuantity(line.quantity)
         }));
 }
 

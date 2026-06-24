@@ -3,7 +3,7 @@
     <div class="cart-footer__divider" />
     <div class="cart-footer__row">
       <span class="cart-footer__label">Estimated total</span>
-      <span class="cart-footer__total">${{ totalFormatted }}</span>
+      <span class="cart-footer__total">{{ totalFormatted }}</span>
     </div>
     <router-link to="/checkout" class="btn-primary cart-footer__cta" @click="$emit('checkout')">
       Checkout

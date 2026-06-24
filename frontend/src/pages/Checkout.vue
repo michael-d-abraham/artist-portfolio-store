@@ -25,7 +25,7 @@
           <div class="preview-body">
             <h2 class="preview-title">{{ line.title }}</h2>
             <p v-if="line.sizeLabel" class="preview-meta">Size: {{ line.sizeLabel }}</p>
-            <p class="preview-price">${{ formatUsdFromCents(line.unitPriceCents) }}</p>
+            <p class="preview-price">{{ formatMoneyFromCents(line.unitPriceCents, 'usd') }}</p>
             <div class="qty-row">
               <label :for="'qty-' + line.productId">Qty</label>
               <input
@@ -39,14 +39,14 @@
               <button type="button" class="btn-ghost" @click="removeLine(line.productId)">Remove</button>
             </div>
           </div>
-          <p class="line-total">${{ formatUsdFromCents(line.lineTotalCents) }}</p>
+          <p class="line-total">{{ formatMoneyFromCents(line.lineTotalCents, 'usd') }}</p>
         </li>
       </ul>
 
       <div class="summary">
         <p class="summary-total">
           <span>Estimated total</span>
-          <strong>${{ formatUsdFromCents(estimatedTotalCents) }}</strong>
+          <strong>{{ formatMoneyFromCents(estimatedTotalCents, 'usd') }}</strong>
         </p>
         <p class="help">Final total may include tax or shipping on Stripe.</p>
       </div>
@@ -73,9 +73,9 @@ import {
   removeFromCart,
   getCheckoutItems
 } from '../utils/cart.js';
+import { formatMoneyFromCents } from '../utils/money.js';
 import {
   displayProductName,
-  formatUsdFromCents,
   primaryProductImageUrl
 } from '../utils/storefrontProduct.js';
 

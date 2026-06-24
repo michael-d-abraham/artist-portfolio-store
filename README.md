@@ -83,10 +83,12 @@ The sections below are for developers who want to understand how the code is org
 frontend/src/          Vue 3 SPA — public pages + admin workspace
 server/
   ai/                  LangGraph agent, tools, Zod schemas
+  controllers/         Request handlers (thin — delegate to services)
   models/              Mongoose schemas
-  routes/              Express route handlers
-  services/            Checkout, orders, dashboard, site settings, R2
+  routes/              Express Router modules (wiring only, no logic)
+  services/            Business logic — checkout, orders, R2, email, AI
   middleware/          Admin auth, image upload
+  utils/               Stripe client, product helpers, validation
 tests/                 Jest + Supertest + mongodb-memory-server
 images/                Demo GIFs, AgenticGraph.png, databaseschema.png
 ```
@@ -103,9 +105,12 @@ npm run dev:all        # API :3000 + Vite :5173
 
 | Command | Purpose |
 |---------|---------|
-| `npm run dev:all` | Run API + frontend together |
-| `npm run build` | Production frontend build |
-| `npm start` | Production server |
+| `npm run dev:all` | Run API (port 3000) + Vite (port 5173) together |
+| `npm run server` | Run Express API only |
+| `npm run dev` | Run Vite dev server only |
+| `npm run build` | Production frontend build → `frontend/dist` |
+| `npm run preview` | Preview production build locally |
+| `npm start` | Production server (`NODE_ENV=production`) |
 | `npm test` | Jest test suite |
 
 Admin login: `/admin/login` (not linked from the public site). Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` in `.env` — synced to MongoDB on server start.
@@ -164,7 +169,7 @@ Order fulfillment statuses: `new_order` → `shipped` → `completed` → `cance
 
 ### API surface (summary)
 
-**Public:** `GET /api/products`, `GET /api/product/:slug`, `POST /api/checkout/create-session`, `POST /api/webhooks/stripe`, `POST /api/contact`, `GET /api/orders/checkout-session/:sessionId`
+**Public:** `GET /api/products`, `GET /api/product/:slug`, `POST /api/create-checkout-session`, `POST /api/webhooks/stripe`, `POST /api/contact`, `GET /api/orders/checkout-session/:sessionId`
 
 **Admin** (session required): products CRUD, image upload, dashboard, orders + fulfillment status, site settings, AI generate / voice profile / save-preferred
 
@@ -172,7 +177,7 @@ Order fulfillment statuses: `new_order` → `shipped` → `completed` → `cance
 
 See `.env.example`. Minimum to run locally:
 
-- **Core:** `MONGO_STRING`, `SESSION_SECRET`, `CLIENT_URL`
+- **Core:** `MONGO_STRING`, `DB_NAME`, `SESSION_SECRET`, `CLIENT_URL`
 - **Admin:** `ADMIN_USERNAME`, `ADMIN_PASSWORD`
 - **Stripe:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 - **Images:** `R2_*` (all five vars)
@@ -184,6 +189,18 @@ Local Stripe webhooks: `stripe listen --forward-to localhost:3000/api/webhooks/s
 ### Tests
 
 Jest suites cover checkout validation, Stripe webhook idempotency, order-success recording, cart behavior, and AI schemas/persistence/auth guards. AI graph is mocked in tests (LangGraph ESM dependency).
+
+---
+
+## Further reading
+
+| Document | What it covers |
+|---|---|
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Full system architecture — request flows, all routes, Mongoose models, auth, checkout, image upload, AI pipeline, env vars |
+| [AGENT_GUIDE.md](./AGENT_GUIDE.md) | Onboarding guide for developers and coding agents — constraints, safe workflow, testing expectations, what not to change |
+| [DECISIONS.md](./DECISIONS.md) | Rationale and trade-offs behind major design choices (MongoDB, R2, sessions, Vue, Stripe webhooks, Ollama) |
+| [NAMING_CONVENTIONS.md](./NAMING_CONVENTIONS.md) | File naming, export naming, BEM CSS, route path, and model field conventions |
+| [FUTURE_WORK.md](./FUTURE_WORK.md) | Backlog — deferred features and improvements across storefront, admin, performance, security, and tech debt |
 
 ---
 

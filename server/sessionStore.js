@@ -1,5 +1,5 @@
 const { MongoStore } = require('connect-mongo');
-const { sessionCookieOptions } = require('./sessionConfig');
+const { sessionCookieOptions, isProduction } = require('./sessionConfig');
 
 const TTL_SECONDS = 7 * 24 * 60 * 60;
 
@@ -30,6 +30,23 @@ function createSessionStore() {
     return MongoStore.create(options);
 }
 
+/**
+ * Resolve the session signing secret. The insecure default is only ever used
+ * outside production; production must supply SESSION_SECRET (enforced here and
+ * at boot via assertProductionConfig).
+ * @returns {string}
+ */
+function resolveSessionSecret() {
+    const secret = process.env.SESSION_SECRET && String(process.env.SESSION_SECRET).trim();
+    if (secret) {
+        return secret;
+    }
+    if (isProduction()) {
+        throw new Error('SESSION_SECRET is required in production');
+    }
+    return 'dev-session-secret-change-me';
+}
+
 function sessionMiddlewareOptions() {
     const store = createSessionStore();
     const cookie = sessionCookieOptions();
@@ -43,7 +60,7 @@ function sessionMiddlewareOptions() {
     }
 
     return {
-        secret: process.env.SESSION_SECRET || 'dev-session-secret-change-me',
+        secret: resolveSessionSecret(),
         saveUninitialized: false,
         resave: false,
         proxy: process.env.NODE_ENV === 'production',

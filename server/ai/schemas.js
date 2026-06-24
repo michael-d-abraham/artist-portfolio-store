@@ -1,8 +1,13 @@
 const z = require('zod');
+const {
+    AI_TONE_VALUES,
+    AI_FOCUS_VALUES,
+    AI_TONE_DEFAULT,
+    AI_FOCUS_DEFAULT
+} = require('../../shared/aiGenerationOptions');
 
-// Tone / focus enums — match what the Vue admin page sends.
-const toneSchema = z.enum(['Poetic', 'Simple', 'Emotional', 'Sales', 'Luxury']);
-const focusSchema = z.enum(['Engagement', 'Sell', 'Story', 'Awareness']);
+const toneSchema = z.enum(AI_TONE_VALUES);
+const focusSchema = z.enum(AI_FOCUS_VALUES);
 
 /*
  * POST /api/admin/ai/generate-ig body.
@@ -11,8 +16,8 @@ const focusSchema = z.enum(['Engagement', 'Sell', 'Story', 'Awareness']);
  */
 const generationRequestSchema = z.object({
     userInput: z.string().min(1, 'userInput is required'),
-    tone: toneSchema.optional().default('Simple'),
-    focus: focusSchema.optional().default('Story')
+    tone: toneSchema.optional().default(AI_TONE_DEFAULT),
+    focus: focusSchema.optional().default(AI_FOCUS_DEFAULT)
 });
 
 /*

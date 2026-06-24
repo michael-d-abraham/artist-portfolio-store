@@ -2,7 +2,14 @@
  * @jest-environment jsdom
  */
 
-const { addToCart, getCart, clearCart, getCheckoutItems } = require('../frontend/src/utils/cart');
+const {
+    addToCart,
+    getCart,
+    clearCart,
+    getCheckoutItems,
+    setCartQuantity,
+    setBuyNowCart
+} = require('../frontend/src/utils/cart');
 
 describe('cart localStorage', () => {
     beforeEach(() => {
@@ -39,5 +46,38 @@ describe('cart localStorage', () => {
 
         clearCart();
         expect(getCart()).toEqual([]);
+    });
+
+    it('setCartQuantity clamps below min and above max', () => {
+        addToCart({
+            _id: '507f1f77bcf86cd799439013',
+            slug: 'clamp-test',
+            quantity_available: 200
+        });
+
+        setCartQuantity('507f1f77bcf86cd799439013', 0);
+        expect(getCart()[0].quantity).toBe(1);
+
+        setCartQuantity('507f1f77bcf86cd799439013', 150);
+        expect(getCart()[0].quantity).toBe(99);
+    });
+
+    it('setBuyNowCart clamps quantity to max', () => {
+        setBuyNowCart(
+            {
+                _id: '507f1f77bcf86cd799439014',
+                slug: 'buy-now',
+                quantity_available: 200
+            },
+            150
+        );
+
+        expect(getCart()).toEqual([
+            {
+                productId: '507f1f77bcf86cd799439014',
+                slug: 'buy-now',
+                quantity: 99
+            }
+        ]);
     });
 });

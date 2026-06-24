@@ -1,7 +1,7 @@
 <template>
   <div class="product-info">
     <h1 class="product-info__title">{{ title }}</h1>
-    <p v-if="price != null" class="product-info__price">${{ price }}</p>
+    <p v-if="price != null" class="product-info__price">{{ price }}</p>
   </div>
 </template>
 

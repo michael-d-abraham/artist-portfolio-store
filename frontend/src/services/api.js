@@ -63,10 +63,6 @@ export function getPublicHomePage() {
     return fetchJson('/api/site/home-page');
 }
 
-export function getPublicContactEmail() {
-    return fetchJson('/api/site/contact-email');
-}
-
 /** Contact form — returns { success, message }; throws on failure with message in Error. */
 export async function submitContactForm(body) {
     const res = await fetch('/api/contact', {

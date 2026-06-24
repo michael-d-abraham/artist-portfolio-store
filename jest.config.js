@@ -10,5 +10,8 @@ module.exports = {
     // frontend ESM files (import/export) without changing production code.
     transform: {
         '^.+\\.js$': ['babel-jest', { plugins: ['@babel/plugin-transform-modules-commonjs'] }]
+    },
+    moduleNameMapper: {
+        '^@shared/(.*)$': '<rootDir>/shared/$1'
     }
 };

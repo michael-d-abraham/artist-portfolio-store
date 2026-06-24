@@ -1,3 +1,5 @@
+import { FULFILLMENT_STATUSES } from '@shared/orderFulfillmentStatus.js';
+
 /** Milliseconds since epoch for sorting; missing/invalid dates sort last when descending. */
 export function dateMs(value) {
   if (!value) return 0;
@@ -6,12 +8,9 @@ export function dateMs(value) {
 }
 
 /** Fulfillment workflow order for admin status sort. */
-export const FULFILLMENT_STATUS_SORT_RANK = {
-  new_order: 0,
-  shipped: 1,
-  completed: 2,
-  cancelled: 3
-};
+export const FULFILLMENT_STATUS_SORT_RANK = Object.fromEntries(
+  FULFILLMENT_STATUSES.map((status, index) => [status, index])
+);
 
 export const ORDER_SORT_OPTIONS = [
   { value: 'newest', label: 'Newest first' },

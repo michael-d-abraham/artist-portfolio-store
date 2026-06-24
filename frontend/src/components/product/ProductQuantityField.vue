@@ -15,6 +15,7 @@
 
 <script setup>
 import QuantityStepper from '../cart/QuantityStepper.vue';
+import { CART_QUANTITY_MIN, CART_QUANTITY_MAX } from '@shared/cartQuantity.js';
 
 defineProps({
   modelValue: {
@@ -23,11 +24,11 @@ defineProps({
   },
   min: {
     type: Number,
-    default: 1
+    default: CART_QUANTITY_MIN
   },
   max: {
     type: Number,
-    default: 99
+    default: CART_QUANTITY_MAX
   }
 });
 

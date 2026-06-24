@@ -4,7 +4,7 @@ const { applyProductRelations } = require('../utils/productPopulate');
 const {
     primaryProductImageUrl,
     displayProductName,
-    formatUsdFromCents
+    formatMoneyFromCents
 } = require('../utils/storefrontProductDisplay');
 const {
     PLATFORMS,
@@ -14,9 +14,11 @@ const {
 const {
     FEATURED_PRODUCT_SLOTS,
     DEFAULT_HOME_PAGE,
-    emptyFeaturedProduct
+    emptyFeaturedProduct,
+    mergeHomePageTextDefaults
 } = require('../utils/homePageDefaults');
 const { withContactFormLabelDefaults } = require('../utils/contactPageDefaults');
+const { isValidEmail } = require('../../shared/email');
 
 const SETTINGS_KEY = 'default';
 
@@ -77,7 +79,7 @@ function normalizeContactEmail(value) {
     if (!email) {
         return { contact_email: '' };
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!isValidEmail(email)) {
         return { errors: ['contact_email must be a valid email address'] };
     }
     return { contact_email: email };
@@ -295,8 +297,8 @@ function productToFeaturedCard(product) {
         product_id: String(product._id),
         slug: product.slug ? String(product.slug) : '',
         title: displayProductName(product),
-        price: formatUsdFromCents(product.price_cents),
-        image_url: primaryProductImageUrl(product)
+        price: formatMoneyFromCents(product.price_cents, product.currency || 'usd'),
+        image_url: primaryProductImageUrl(product) ?? ''
     };
 }
 
@@ -327,23 +329,6 @@ async function resolveFeaturedProductCards(slots) {
         }
         return productToFeaturedCard(product);
     });
-}
-
-function mergeHomePageTextDefaults(stored) {
-    const base = stored && typeof stored === 'object' ? stored : {};
-
-    return {
-        hero_title: normalizeOptionalText(base.hero_title),
-        hero_subtitle: normalizeOptionalText(base.hero_subtitle),
-        hero_image_url: normalizeOptionalText(base.hero_image_url),
-        featured_title:
-            normalizeOptionalText(base.featured_title) || DEFAULT_HOME_PAGE.featured_title,
-        about_title:
-            normalizeOptionalText(base.about_title) || DEFAULT_HOME_PAGE.about_title,
-        about_header: normalizeOptionalText(base.about_header),
-        about_text: normalizeOptionalText(base.about_text),
-        about_image_url: normalizeOptionalText(base.about_image_url)
-    };
 }
 
 function toAdminHomePagePayload(doc) {

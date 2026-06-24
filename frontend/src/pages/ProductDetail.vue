@@ -41,7 +41,7 @@
       />
 
       <p v-if="product.price_cents != null" class="price">
-        {{ formatUsdFromCents(product.price_cents) }} {{ (product.currency || 'usd').toUpperCase() }}
+        {{ formatMoneyFromCents(product.price_cents, product.currency || 'usd') }}
       </p>
       <p v-if="showStock" class="meta stock">Available: {{ product.quantity_available }}</p>
 
@@ -60,12 +60,13 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { getProductBySlug } from '../services/api.js';
 import { addToCart, setCartQuantity } from '../utils/cart.js';
+import { CART_QUANTITY_MAX } from '@shared/cartQuantity.js';
 import { useCart } from '../composables/useCart.js';
 import { useMediaQuery } from '../composables/useMediaQuery.js';
+import { formatMoneyFromCents } from '../utils/money.js';
 import {
   productTitle,
-  productFormat,
-  formatUsdFromCents
+  productFormat
 } from '../utils/storefrontProduct.js';
 import ProductBreadcrumb from '../components/product/ProductBreadcrumb.vue';
 import ProductImageGallery from '../components/product/ProductImageGallery.vue';
@@ -103,7 +104,10 @@ const imageList = computed(() => {
 
 const formattedPrice = computed(() => {
   if (product.value?.price_cents == null) return null;
-  return formatUsdFromCents(product.value.price_cents);
+  return formatMoneyFromCents(
+    product.value.price_cents,
+    product.value.currency || 'usd'
+  );
 });
 
 const showStock = computed(() => {
@@ -114,7 +118,7 @@ const showStock = computed(() => {
 const maxQuantity = computed(() => {
   const q = product.value?.quantity_available;
   if (q == null || typeof q !== 'number') {
-    return 99;
+    return CART_QUANTITY_MAX;
   }
   return Math.max(1, q);
 });

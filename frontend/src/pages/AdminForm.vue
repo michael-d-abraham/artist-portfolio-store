@@ -73,6 +73,7 @@ import { reactive, ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getAdminProductById, updateAdminProduct } from '../services/api.js';
 import AdminProductImages, { buildProductImagesPayload } from '../components/admin/AdminProductImages.vue';
+import { dollarsToCents } from '../utils/money.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -114,12 +115,6 @@ const submitting = ref(false);
 function clearFieldErrors() {
   fieldErrors.title = '';
   fieldErrors.description = '';
-}
-
-function dollarsToCents(d) {
-  const n = Number(d);
-  if (!Number.isFinite(n) || n < 0) return NaN;
-  return Math.round(n * 100);
 }
 
 function validate() {

@@ -38,10 +38,8 @@
 
 <script setup>
 import { computed } from 'vue';
-import {
-  displayProductName,
-  formatUsdFromCents
-} from '../../utils/storefrontProduct.js';
+import { formatMoneyFromCents } from '../../utils/money.js';
+import { displayProductName } from '../../utils/storefrontProduct.js';
 import GalleryProductCard from '../product/GalleryProductCard.vue';
 
 const props = defineProps({
@@ -61,7 +59,7 @@ const selectedProduct = computed(() => {
 });
 
 function optionLabel(product) {
-  const price = `$${formatUsdFromCents(product.price_cents)}`;
+  const price = formatMoneyFromCents(product.price_cents, product.currency || 'usd');
   return `${displayProductName(product)} (${price})`;
 }
 

@@ -24,7 +24,7 @@
       >
         <h3 class="product-title">{{ displayProductName(product) }}</h3>
       </router-link>
-      <p class="product-price">${{ formatUsdFromCents(product.price_cents) }}</p>
+      <p class="product-price">{{ formatMoneyFromCents(product.price_cents, product.currency || 'usd') }}</p>
     </div>
 
     <button
@@ -47,9 +47,9 @@
 
 <script setup>
 import { addToCart } from '../../utils/cart.js';
+import { formatMoneyFromCents } from '../../utils/money.js';
 import {
   displayProductName,
-  formatUsdFromCents,
   primaryProductImageUrl,
   productTitle
 } from '../../utils/storefrontProduct.js';

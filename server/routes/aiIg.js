@@ -1,6 +1,11 @@
 /**
  * Admin AI HTTP API for Instagram-ready post copy.
  *
+ * Trust boundary: every route here is mounted behind requireAdmin in app.js, so
+ * only authenticated admins can reach the model. userInput is bounded and shape-
+ * validated by the Zod schemas below before reaching the LLM; prompt-injection
+ * risk is limited to the admin's own session and the local Ollama instance.
+ *
  * Routes (all require admin session):
  *   POST /api/admin/ai/generate-ig    — run LangGraph agent pipeline, save history, return copy
  *   POST /api/admin/ai/save-preferred — heart a line; persisted to MongoDB

@@ -1,10 +1,10 @@
 const path = require('path');
 const express = require('express');
 const session = require('express-session');
+const helmet = require('helmet');
 
 const adminProductRoutes = require('./routes/adminProducts');
 const adminSessionRoutes = require('./routes/adminSession');
-const checkoutRoutes = require('./routes/checkout');
 const { createCheckoutSessionHandler } = require('./controllers/checkoutController');
 const ordersRoutes = require('./routes/orders');
 const stripeWebhookRoutes = require('./routes/stripeWebhook');
@@ -19,6 +19,7 @@ const adminDashboardRoutes = require('./routes/adminDashboard');
 const { attachAdminUser, requireAdminRole } = require('./middleware/adminAuth');
 const { isProduction } = require('./sessionConfig');
 const { sessionMiddlewareOptions } = require('./sessionStore');
+const { contactRateLimiter, checkoutRateLimiter } = require('./middleware/rateLimiters');
 const cartSessionRoutes = require('./routes/cartSession');
 
 function createApp() {
@@ -30,12 +31,20 @@ function createApp() {
     }
 
     app.use(
+        helmet({
+            // Cross-origin product images (R2) must still load on the storefront.
+            crossOriginEmbedderPolicy: false,
+            crossOriginResourcePolicy: { policy: 'cross-origin' }
+        })
+    );
+
+    app.use(
         '/api/webhooks/stripe',
         express.raw({ type: 'application/json' }),
         stripeWebhookRoutes
     );
 
-    app.use(express.json());
+    app.use(express.json({ limit: '100kb' }));
 
     app.use(session(sessionMiddlewareOptions()));
 
@@ -49,11 +58,10 @@ function createApp() {
     app.use('/api/admin/dashboard', ...requireAdmin, adminDashboardRoutes);
     app.use('/api/admin/site', ...requireAdmin, adminSiteSettingsRoutes);
     app.use('/api/site', siteRoutes);
-    app.use('/api/contact', contactRoutes);
+    app.use('/api/contact', contactRateLimiter, contactRoutes);
     app.use('/api/products', listRouter);
     app.use('/api/product', detailRouter);
-    app.use('/api/checkout', checkoutRoutes);
-    app.post('/api/create-checkout-session', createCheckoutSessionHandler);
+    app.post('/api/create-checkout-session', checkoutRateLimiter, createCheckoutSessionHandler);
     app.use('/api/orders', ordersRoutes);
     app.use('/api/admin/ai', ...requireAdmin, aiIgRoutes);
 

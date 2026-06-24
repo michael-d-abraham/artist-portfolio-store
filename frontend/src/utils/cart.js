@@ -1,4 +1,5 @@
 import { getCartSession, putCartSession } from '../services/api.js';
+import { clampCartQuantity } from '@shared/cartQuantity.js';
 
 const CART_KEY = 'artist-portfolio-cart';
 
@@ -85,7 +86,7 @@ export function setBuyNowCart(product, quantity = 1) {
     if (!product || !product._id) {
         return { ok: false, reason: 'invalid' };
     }
-    const qty = Math.max(1, Number(quantity) || 1);
+    const qty = clampCartQuantity(quantity);
     writeCart([
         {
             productId: String(product._id),
@@ -104,7 +105,7 @@ export function setCartQuantity(productId, quantity) {
     const cart = readCart();
     const line = cart.find((i) => i.productId === String(productId));
     if (!line) return;
-    const next = Math.max(1, Math.min(99, Number(quantity) || 1));
+    const next = clampCartQuantity(quantity);
     line.quantity = next;
     writeCart(cart);
 }
@@ -117,7 +118,7 @@ export function clearCart() {
     writeCart([]);
 }
 
-/** Payload for POST /api/checkout/create-session — ids and quantities only. */
+/** Payload for POST /api/create-checkout-session — ids and quantities only. */
 export function getCheckoutItems() {
     return readCart().map((line) => ({
         product_id: line.productId,

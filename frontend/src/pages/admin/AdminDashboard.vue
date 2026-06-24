@@ -76,7 +76,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { getAdminDashboard } from '../../services/api.js';
-import { formatUsdFromCents } from '../../utils/storefrontProduct.js';
+import { formatMoneyFromCents } from '../../utils/money.js';
 
 const loading = ref(true);
 const error = ref('');
@@ -89,9 +89,7 @@ const stats = ref({
 });
 
 function formatAmount(cents, currency) {
-    const code = (currency || 'usd').toUpperCase();
-    const amount = `$${formatUsdFromCents(cents)}`;
-    return code === 'USD' ? amount : `${amount} ${code}`;
+    return formatMoneyFromCents(cents, currency || 'usd');
 }
 
 function formatOrderDate(value) {

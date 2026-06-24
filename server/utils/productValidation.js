@@ -34,13 +34,22 @@ function validateCurrency(value, errors) {
     }
 }
 
-function validateYearCreated(value, errors) {
+function parseYearCreated(value) {
     if (value === undefined) {
-        return;
+        return { ok: true, value: undefined };
     }
-    if (value !== null && (typeof value !== 'number' || !Number.isInteger(value))) {
-        errors.push('year_created must be an integer or null');
+    if (value === null) {
+        return { ok: true, value: null };
     }
+    if (typeof value !== 'number' || !Number.isInteger(value)) {
+        return { ok: false, error: 'year_created must be an integer or null' };
+    }
+    return { ok: true, value };
+}
+
+function validateYearCreated(value, errors) {
+    const result = parseYearCreated(value);
+    if (!result.ok) errors.push(result.error);
 }
 
 function validateProductImagesArray(images, errors) {
@@ -134,6 +143,7 @@ function validateProductUpdateBody(body) {
 }
 
 module.exports = {
+    parseYearCreated,
     validateProductCreateBody,
     validateProductUpdateBody
 };

@@ -119,7 +119,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { getAdminOrders, updateAdminOrderFulfillmentStatus } from '../../services/api.js';
-import { formatUsdFromCents } from '../../utils/storefrontProduct.js';
+import { formatMoneyFromCents } from '../../utils/money.js';
 import {
     FULFILLMENT_STATUS_OPTIONS,
     fulfillmentStatusClass,
@@ -138,9 +138,7 @@ const savingId = ref(null);
 const sortedOrders = computed(() => sortOrders(orders.value, sortBy.value));
 
 function formatAmount(cents, currency) {
-    const code = (currency || 'usd').toUpperCase();
-    const amount = formatUsdFromCents(cents);
-    return code === 'USD' ? amount : `${amount} ${code}`;
+    return formatMoneyFromCents(cents, currency || 'usd');
 }
 
 function formatOrderDate(value) {
