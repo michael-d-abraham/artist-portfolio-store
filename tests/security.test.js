@@ -284,4 +284,10 @@ describe('security headers', () => {
         expect(res.status).toBe(401);
         expect(res.headers['x-content-type-options']).toBe('nosniff');
     });
+
+    it('allows storefront image CDNs in CSP img-src', async () => {
+        const res = await request(app).get('/api/admin/products');
+        const csp = res.headers['content-security-policy'] || '';
+        expect(csp).toMatch(/img-src[^;]*https:\/\/static\.wixstatic\.com/);
+    });
 });

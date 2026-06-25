@@ -22,6 +22,46 @@ const { sessionMiddlewareOptions } = require('./sessionStore');
 const { contactRateLimiter, checkoutRateLimiter } = require('./middleware/rateLimiters');
 const cartSessionRoutes = require('./routes/cartSession');
 
+function parseOrigin(value) {
+    if (!value || typeof value !== 'string') {
+        return null;
+    }
+    try {
+        return new URL(value.trim()).origin;
+    } catch {
+        return null;
+    }
+}
+
+/** Helmet defaults block all external images; allow storefront CDNs from env. */
+function buildContentSecurityPolicyDirectives() {
+    const imgSrc = ["'self'", 'data:', 'blob:', 'https://static.wixstatic.com'];
+
+    const r2Origin = parseOrigin(process.env.R2_PUBLIC_URL);
+    if (r2Origin) {
+        imgSrc.push(r2Origin);
+    }
+
+    const extra = process.env.CSP_IMG_ORIGINS;
+    if (extra) {
+        for (const part of extra.split(',')) {
+            const trimmed = part.trim();
+            if (!trimmed) {
+                continue;
+            }
+            const origin = parseOrigin(trimmed) || trimmed;
+            if (!imgSrc.includes(origin)) {
+                imgSrc.push(origin);
+            }
+        }
+    }
+
+    return {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'img-src': imgSrc
+    };
+}
+
 function createApp() {
     const app = express();
 
@@ -34,7 +74,10 @@ function createApp() {
         helmet({
             // Cross-origin product images (R2) must still load on the storefront.
             crossOriginEmbedderPolicy: false,
-            crossOriginResourcePolicy: { policy: 'cross-origin' }
+            crossOriginResourcePolicy: { policy: 'cross-origin' },
+            contentSecurityPolicy: {
+                directives: buildContentSecurityPolicyDirectives()
+            }
         })
     );
 
