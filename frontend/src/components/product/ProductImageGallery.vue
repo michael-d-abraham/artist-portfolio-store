@@ -18,7 +18,16 @@
         @pointerup="onPointerUp"
         @pointercancel="onPointerUp"
       >
-        <div v-if="currentImage" class="product-image-gallery__image-frame">
+        <div
+          v-if="currentImage"
+          class="product-image-gallery__image-frame product-image-gallery__image-frame--clickable"
+          role="button"
+          tabindex="0"
+          aria-label="View larger image"
+          @click="onImageClick"
+          @keydown.enter.prevent="openLightbox"
+          @keydown.space.prevent="openLightbox"
+        >
           <Transition
             :name="slideTransitionName"
             @before-leave="onSlideStart"
@@ -36,12 +45,20 @@
         </div>
         <p v-else class="product-image-gallery__empty">No image</p>
 
+        <ProductFloatingCircleButton
+          v-if="currentImage && images.length && isMobile"
+          icon="expand"
+          placement="stage-enlarge"
+          size="md"
+          aria-label="View larger image"
+          @click.stop="openLightbox"
+        />
         <button
-          v-if="currentImage && images.length"
+          v-else-if="currentImage && images.length"
           type="button"
           class="product-image-gallery__enlarge"
           aria-label="View larger image"
-          @click="lightboxOpen = true"
+          @click.stop="openLightbox"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
@@ -84,8 +101,22 @@
 
     <Teleport :to="teleportTarget">
       <Transition name="gallery-lightbox">
+        <MobileFullscreenImageViewer
+          v-if="lightboxOpen && currentImage && mobileFullscreenActive"
+          :images="images"
+          :active-index="activeIndex"
+          :image-alt="imageAlt"
+          :slide-transition-name="slideTransitionName"
+          :is-sliding="isSliding"
+          @close="closeLightbox"
+          @prev="goPrev"
+          @next="goNext"
+          @go-to-index="goToIndex"
+          @slide-start="onSlideStart"
+          @slide-end="onSlideEnd"
+        />
         <div
-          v-if="lightboxOpen && currentImage"
+          v-else-if="lightboxOpen && currentImage"
           class="product-image-gallery__lightbox"
           :class="{ 'product-image-gallery__lightbox--contained': containedLightboxActive }"
           role="dialog"
@@ -118,19 +149,21 @@
                 :disabled="!canGoPrev || isSliding"
                 @click.stop="goPrev"
               />
-              <div class="product-image-gallery__lightbox-image-frame product-image-gallery__lightbox-image-frame--contained">
-                <Transition
-                  :name="slideTransitionName"
-                  @before-leave="onSlideStart"
-                  @after-enter="onSlideEnd"
-                >
-                  <img
-                    :key="activeIndex"
-                    class="product-image-gallery__lightbox-img product-image-gallery__slide-image"
-                    :src="currentImage.image_url"
-                    :alt="currentImage.alt_text || imageAlt"
-                  />
-                </Transition>
+              <div class="product-image-gallery__lightbox-viewport product-image-gallery__lightbox-viewport--contained">
+                <div class="product-image-gallery__lightbox-image-frame product-image-gallery__lightbox-image-frame--fullscreen">
+                  <Transition
+                    :name="slideTransitionName"
+                    @before-leave="onSlideStart"
+                    @after-enter="onSlideEnd"
+                  >
+                    <img
+                      :key="activeIndex"
+                      class="product-image-gallery__lightbox-img product-image-gallery__slide-image"
+                      :src="currentImage.image_url"
+                      :alt="currentImage.alt_text || imageAlt"
+                    />
+                  </Transition>
+                </div>
               </div>
               <ProductGalleryNavButton
                 v-if="canSwipe"
@@ -158,7 +191,7 @@
                 :disabled="!canGoPrev || isSliding"
                 @click.stop="goPrev"
               />
-              <div class="product-image-gallery__lightbox-image-frame">
+              <div class="product-image-gallery__lightbox-image-frame product-image-gallery__lightbox-image-frame--fullscreen">
                 <Transition
                   :name="slideTransitionName"
                   @before-leave="onSlideStart"
@@ -209,7 +242,9 @@
 import { ref, computed, watch, onUnmounted } from 'vue';
 import { useMediaQuery } from '../../composables/useMediaQuery.js';
 import ProductCloseButton from './ProductCloseButton.vue';
+import ProductFloatingCircleButton from './ProductFloatingCircleButton.vue';
 import ProductGalleryNavButton from './ProductGalleryNavButton.vue';
+import MobileFullscreenImageViewer from './MobileFullscreenImageViewer.vue';
 
 const props = defineProps({
   images: {
@@ -251,6 +286,10 @@ const containedLightboxActive = computed(
   () => props.containedLightbox && Boolean(props.lightboxTarget)
 );
 
+const mobileFullscreenActive = computed(
+  () => isMobile.value && !containedLightboxActive.value
+);
+
 const teleportTarget = computed(() => {
   if (containedLightboxActive.value) {
     return props.lightboxTarget;
@@ -261,6 +300,7 @@ const teleportTarget = computed(() => {
 let swipeStartX = 0;
 let pointerSwipeActive = false;
 let touchSwipeActive = false;
+let suppressImageClick = false;
 let slideUnlockTimer = null;
 
 const SLIDE_DURATION_MS = 260;
@@ -327,6 +367,24 @@ function closeLightbox() {
   lightboxOpen.value = false;
 }
 
+function openLightbox() {
+  if (!currentImage.value || lightboxOpen.value) {
+    return;
+  }
+  lightboxOpen.value = true;
+}
+
+function onImageClick(event) {
+  if (suppressImageClick) {
+    suppressImageClick = false;
+    return;
+  }
+  if (isControlTarget(event.target)) {
+    return;
+  }
+  openLightbox();
+}
+
 function onLightboxBackdropClick(event) {
   if (containedLightboxActive.value) {
     if (event.target === event.currentTarget) {
@@ -334,22 +392,9 @@ function onLightboxBackdropClick(event) {
     }
     return;
   }
-  if (!isMobile.value) {
-    if (event.target === event.currentTarget) {
-      closeLightbox();
-    }
-    return;
+  if (event.target === event.currentTarget) {
+    closeLightbox();
   }
-  if (!lightboxOpen.value) {
-    return;
-  }
-  if (event.target.closest('.product-image-gallery__lightbox-img')) {
-    return;
-  }
-  if (isControlTarget(event.target)) {
-    return;
-  }
-  closeLightbox();
 }
 
 function onContainedLightboxTouchStart(event) {
@@ -414,43 +459,60 @@ function goPrev() {
 }
 
 function applySwipeDelta(delta) {
-  if (!canSwipe.value || isSliding.value || Math.abs(delta) < 40) return;
+  if (!canSwipe.value || isSliding.value || Math.abs(delta) < 40) return false;
   if (delta < 0) {
     goNext();
   } else {
     goPrev();
   }
+  return true;
 }
 
 function onTouchStart(event) {
-  if (!canSwipe.value || isControlTarget(event.target)) return;
+  if (isControlTarget(event.target)) return;
   touchSwipeActive = true;
   swipeStartX = event.touches[0]?.clientX ?? 0;
 }
 
 function onTouchEnd(event) {
-  if (!canSwipe.value || !touchSwipeActive) return;
+  if (!touchSwipeActive) return;
   touchSwipeActive = false;
   const endX = event.changedTouches[0]?.clientX ?? 0;
-  applySwipeDelta(endX - swipeStartX);
+  const delta = endX - swipeStartX;
+  if (applySwipeDelta(delta)) {
+    suppressImageClick = true;
+    return;
+  }
+  if (Math.abs(delta) < 10 && !isControlTarget(event.target)) {
+    openLightbox();
+    suppressImageClick = true;
+  }
 }
 
 function onPointerDown(event) {
-  if (!canSwipe.value || event.pointerType === 'touch') return;
+  if (event.pointerType === 'touch') return;
   if (event.button !== 0) return;
   if (isControlTarget(event.target)) return;
 
   pointerSwipeActive = true;
   swipeStartX = event.clientX;
-  getPointerSurface()?.setPointerCapture?.(event.pointerId);
+  if (canSwipe.value) {
+    getPointerSurface()?.setPointerCapture?.(event.pointerId);
+  }
 }
 
 function onPointerUp(event) {
-  if (!canSwipe.value || event.pointerType === 'touch') return;
+  if (event.pointerType === 'touch') return;
   if (!pointerSwipeActive) return;
 
   pointerSwipeActive = false;
-  applySwipeDelta(event.clientX - swipeStartX);
+  const delta = event.clientX - swipeStartX;
+  if (applySwipeDelta(delta)) {
+    suppressImageClick = true;
+  } else if (Math.abs(delta) < 10 && !isControlTarget(event.target)) {
+    openLightbox();
+    suppressImageClick = true;
+  }
   try {
     getPointerSurface()?.releasePointerCapture?.(event.pointerId);
   } catch {
@@ -563,6 +625,15 @@ onUnmounted(() => {
   min-height: 0;
 }
 
+.product-image-gallery__image-frame--clickable {
+  cursor: zoom-in;
+}
+
+.product-image-gallery__image-frame--clickable:focus-visible {
+  outline: none;
+  box-shadow: inset var(--focus-ring);
+}
+
 @media (max-width: 640px) {
   .product-image-gallery__image {
     width: 100%;
@@ -658,10 +729,6 @@ onUnmounted(() => {
   z-index: 4;
 }
 
-.product-image-gallery__lightbox-close :deep(.product-close-button) {
-  margin: 0;
-}
-
 .product-image-gallery__lightbox-stage {
   position: relative;
   display: flex;
@@ -687,18 +754,107 @@ onUnmounted(() => {
   padding: 12px 0 16px;
 }
 
-.product-image-gallery__lightbox:not(.product-image-gallery__lightbox--contained) .product-image-gallery__lightbox-stage {
-  flex: 0 1 auto;
-  width: 100%;
-  height: 100%;
-}
-
 .product-image-gallery__lightbox:not(.product-image-gallery__lightbox--contained) .product-image-gallery__dots--lightbox {
   position: absolute;
   bottom: 20px;
   left: 0;
   right: 0;
   padding: 0;
+}
+
+@media (min-width: 641px) {
+  .product-image-gallery__lightbox--contained {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .product-image-gallery__lightbox--contained .product-image-gallery__lightbox-stage {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    align-items: stretch;
+  }
+
+  .product-image-gallery__lightbox-viewport--contained {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    background: var(--color-product-image-bg, #f8f8f8);
+    touch-action: pan-y pinch-zoom;
+  }
+
+  .product-image-gallery__lightbox--contained .product-image-gallery__dots--lightbox {
+    flex-shrink: 0;
+    position: static;
+    padding: 12px 0 16px;
+  }
+
+  .product-image-gallery__lightbox:not(.product-image-gallery__lightbox--contained) {
+    padding: 48px 56px 32px;
+  }
+
+  .product-image-gallery__lightbox:not(.product-image-gallery__lightbox--contained) .product-image-gallery__lightbox-stage {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .product-image-gallery__lightbox:not(.product-image-gallery__lightbox--contained) .product-image-gallery__lightbox-viewport {
+    position: relative;
+    width: min(100%, 1100px);
+    height: min(72vh, 720px);
+    min-height: min(72vh, 720px);
+    max-height: min(72vh, 720px);
+    flex-shrink: 0;
+    background: var(--color-product-image-bg, #f8f8f8);
+    overflow: hidden;
+    box-sizing: border-box;
+    touch-action: pan-y pinch-zoom;
+  }
+
+  .product-image-gallery__lightbox:not(.product-image-gallery__lightbox--contained) .product-image-gallery__lightbox-viewport--swipeable {
+    cursor: grab;
+    user-select: none;
+  }
+
+  .product-image-gallery__lightbox:not(.product-image-gallery__lightbox--contained) .product-image-gallery__lightbox-viewport--swipeable:active {
+    cursor: grabbing;
+  }
+
+  .product-image-gallery__lightbox:not(.product-image-gallery__lightbox--contained) .product-image-gallery__dots--lightbox {
+    position: static;
+    flex-shrink: 0;
+    margin-top: 16px;
+    padding: 0;
+  }
+
+  .product-image-gallery__lightbox .product-image-gallery__lightbox-image-frame--fullscreen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .product-image-gallery__lightbox .product-image-gallery__lightbox-image-frame--fullscreen .product-image-gallery__lightbox-img,
+  .product-image-gallery__lightbox .product-image-gallery__lightbox-image-frame--fullscreen .product-image-gallery__slide-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: center;
+  }
 }
 
 .product-image-gallery__lightbox-img {
@@ -768,22 +924,18 @@ onUnmounted(() => {
   opacity: 1;
 }
 
-.product-image-gallery__lightbox-image-frame--contained {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.product-image-gallery__lightbox--contained .product-image-gallery__lightbox-image-frame--contained .product-image-gallery__slide-image {
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
+@media (min-width: 641px) {
+  .product-image-gallery__lightbox .gallery-slide-next-enter-active,
+  .product-image-gallery__lightbox .gallery-slide-next-leave-active,
+  .product-image-gallery__lightbox .gallery-slide-prev-enter-active,
+  .product-image-gallery__lightbox .gallery-slide-prev-leave-active {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: center;
+  }
 }
 
 .gallery-lightbox-enter-active,
@@ -806,86 +958,6 @@ onUnmounted(() => {
   transform: scale(0.94);
   opacity: 0;
 }
-@media (max-width: 640px) {
-  .product-image-gallery__lightbox:not(.product-image-gallery__lightbox--contained) {
-    --gallery-mobile-lightbox-viewport-height: min(50svh, 380px);
-    background: #fff;
-    justify-content: center;
-    padding:
-      calc(env(safe-area-inset-top, 0px) + 52px)
-      max(16px, env(safe-area-inset-right, 0px))
-      calc(env(safe-area-inset-bottom, 0px) + 16px)
-      max(16px, env(safe-area-inset-left, 0px));
-  }
-
-  .product-image-gallery__lightbox:not(.product-image-gallery__lightbox--contained) .product-image-gallery__lightbox-close {
-    top: calc(env(safe-area-inset-top, 0px) + 12px);
-    right: calc(env(safe-area-inset-right, 0px) + 12px);
-  }
-
-  .product-image-gallery__lightbox:not(.product-image-gallery__lightbox--contained) .product-image-gallery__lightbox-stage {
-    flex: 1;
-    width: 100%;
-    min-height: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: default;
-  }
-
-  .product-image-gallery__lightbox-viewport {
-    position: relative;
-    width: 100%;
-    max-width: 100%;
-    height: var(--gallery-mobile-lightbox-viewport-height);
-    min-height: var(--gallery-mobile-lightbox-viewport-height);
-    max-height: var(--gallery-mobile-lightbox-viewport-height);
-    flex-shrink: 0;
-    background: var(--color-product-image-bg);
-    overflow: hidden;
-    box-sizing: border-box;
-    touch-action: pan-y pinch-zoom;
-  }
-
-  .product-image-gallery__lightbox-viewport--swipeable {
-    cursor: grab;
-    user-select: none;
-  }
-
-  .product-image-gallery__lightbox-viewport--swipeable:active {
-    cursor: grabbing;
-  }
-
-  .product-image-gallery__lightbox-image-frame {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .product-image-gallery__lightbox:not(.product-image-gallery__lightbox--contained) .product-image-gallery__lightbox-img {
-    width: 100%;
-    height: 100%;
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    object-position: center;
-    pointer-events: none;
-  }
-
-  .product-image-gallery__lightbox:not(.product-image-gallery__lightbox--contained) .product-image-gallery__dots--lightbox {
-    position: static;
-    flex-shrink: 0;
-    margin-top: 14px;
-    padding: 0;
-  }
-
-  .gallery-lightbox-enter-from,
-  .gallery-lightbox-leave-to {
-    opacity: 1;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .gallery-slide-next-enter-active,
@@ -904,9 +976,7 @@ onUnmounted(() => {
     transform: none;
     opacity: 0;
   }
-}
 
-@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
   .gallery-lightbox-enter-active,
   .gallery-lightbox-leave-active {
     transition: opacity 0.01ms linear;

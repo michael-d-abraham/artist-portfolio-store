@@ -13,10 +13,10 @@
       class="product-page__content product-page__content--mobile product-page__content--overlay"
     >
       <ProductCloseButton
-        variant="floating"
+        placement="overlay"
         flush
         back-to="/gallery"
-        :as-button="true"
+        as-button
         @close="emit('close')"
       />
 
@@ -137,8 +137,8 @@
       </div>
     </div>
 
-    <!-- Desktop layout -->
-    <article v-else-if="product" class="detail detail--desktop">
+    <!-- Desktop layout (overlay shell renders immediately even while loading) -->
+    <article v-else-if="!isMobile && (product || overlay)" class="detail detail--desktop">
       <div ref="detailCardRef" class="detail__card" @click="onDesktopCardBackdropClick">
         <ProductCloseButton
           class="detail__close"
@@ -150,6 +150,7 @@
         />
 
         <div
+          v-if="product"
           ref="detailGridRef"
           class="detail__grid"
           :class="{ 'detail__grid--lightbox-open': imageLightboxOpen }"
@@ -159,6 +160,7 @@
               v-if="imageList.length"
               ref="galleryRef"
               class="detail__gallery"
+              :priority="overlay"
               :images="imageList"
               :image-alt="productTitle(product)"
               contained-lightbox
@@ -197,6 +199,24 @@
             <ProductDescription :text="product.description || ''" />
           </div>
         </div>
+
+        <div v-else class="detail__grid detail__grid--loading" aria-hidden="true">
+          <div class="detail__media">
+            <div class="product-skeleton product-skeleton--image product-skeleton--desktop-image" />
+          </div>
+          <div class="detail__info">
+            <div class="product-skeleton product-skeleton--title product-skeleton--desktop-title" />
+            <div class="product-skeleton product-skeleton--price product-skeleton--desktop-price" />
+            <div class="product-skeleton product-skeleton--quantity product-skeleton--desktop-quantity" />
+            <div class="product-skeleton product-skeleton--cart product-skeleton--desktop-cart" />
+            <div class="product-skeleton-group product-skeleton-group--description">
+              <div class="product-skeleton product-skeleton--line" />
+              <div class="product-skeleton product-skeleton--line product-skeleton--line-short" />
+            </div>
+          </div>
+        </div>
+
+        <p v-if="error" class="error product-page__inline-error product-page__inline-error--desktop">{{ error }}</p>
       </div>
     </article>
   </div>
@@ -317,7 +337,7 @@ const addButtonLabel = computed(() => {
 });
 
 const showFullPageLoader = computed(
-  () => loading.value && !(props.overlay && isMobile.value)
+  () => loading.value && !props.overlay
 );
 
 function incrementQty() {
@@ -348,7 +368,7 @@ function onDesktopCardBackdropClick(event) {
   if (!grid || grid.contains(event.target)) {
     return;
   }
-  if (event.target.closest('.product-close-button, .product-floating-circle-button')) {
+  if (event.target.closest('.product-close-button')) {
     return;
   }
   closeImageLightbox();
@@ -383,9 +403,53 @@ function onAddToCart() {
   }, 1500);
 }
 
+function productImageIds(item) {
+  const imgs = item?.product_images;
+  if (!Array.isArray(imgs)) {
+    return '';
+  }
+  return imgs.map((i) => i?._id || i?.image_url).filter(Boolean).join(',');
+}
+
+function hasProductChanged(current, fresh) {
+  if (!fresh) {
+    return false;
+  }
+  if (!current) {
+    return true;
+  }
+  if (current.updated_at && fresh.updated_at) {
+    return current.updated_at !== fresh.updated_at;
+  }
+  return (
+    current.price_cents !== fresh.price_cents
+    || current.quantity_available !== fresh.quantity_available
+    || (current.description || '') !== (fresh.description || '')
+    || productImageIds(current) !== productImageIds(fresh)
+  );
+}
+
+let loadRequestId = 0;
+
+async function refreshProductInBackground(slug, requestId) {
+  try {
+    const fresh = await getProductBySlug(slug);
+    if (requestId !== loadRequestId || props.slug !== slug) {
+      return;
+    }
+    if (hasProductChanged(product.value, fresh)) {
+      product.value = fresh;
+    }
+  } catch {
+    // Keep cached data on background refresh failure.
+  }
+}
+
 async function load() {
-  const cached = resolveCachedProduct(props.slug);
+  const slug = props.slug;
+  const cached = resolveCachedProduct(slug);
   const hadCache = Boolean(cached);
+  const requestId = ++loadRequestId;
 
   error.value = '';
   quantity.value = 1;
@@ -395,19 +459,32 @@ async function load() {
   if (cached) {
     product.value = cached;
     loading.value = false;
-  } else {
-    loading.value = true;
+    refreshProductInBackground(slug, requestId);
+    return;
+  }
+
+  loading.value = true;
+  if (product.value?.slug !== slug) {
     product.value = null;
   }
 
   try {
-    product.value = await getProductBySlug(props.slug);
+    const fresh = await getProductBySlug(slug);
+    if (requestId !== loadRequestId || props.slug !== slug) {
+      return;
+    }
+    product.value = fresh;
   } catch (e) {
+    if (requestId !== loadRequestId || props.slug !== slug) {
+      return;
+    }
     if (!hadCache) {
       error.value = e.status === 404 ? 'Product not found.' : e.message || 'Failed to load product';
     }
   } finally {
-    loading.value = false;
+    if (requestId === loadRequestId && props.slug === slug) {
+      loading.value = false;
+    }
   }
 }
 
@@ -782,11 +859,6 @@ watch(imageLightboxOpen, (open) => {
     margin-top: calc(env(safe-area-inset-top, 0px) + 3.5rem);
   }
 
-  .product-page--overlay .product-page__content--overlay :deep(.product-image-gallery__enlarge) {
-    right: 6px;
-    bottom: 6px;
-  }
-
   .product-page__content--mobile:not(.product-page__content--overlay) :deep(.product-image-gallery) {
     padding-top: 1.25rem;
   }
@@ -810,11 +882,51 @@ watch(imageLightboxOpen, (open) => {
     margin-top: 0.25rem;
   }
 
-  .product-page__inline-error {
-    margin: 0.75rem 0 0;
-    font-size: 0.875rem;
-    text-align: center;
-  }
+.product-page__inline-error {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.product-page__inline-error--desktop {
+  position: absolute;
+  left: 40px;
+  right: 56px;
+  bottom: 24px;
+  margin: 0;
+  text-align: left;
+}
+
+.product-skeleton--desktop-image {
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  border-radius: 0;
+}
+
+.product-skeleton--desktop-title {
+  height: 1.375rem;
+  width: 68%;
+  margin-bottom: 0.75rem;
+}
+
+.product-skeleton--desktop-price {
+  height: 1.125rem;
+  width: 32%;
+  margin-bottom: 1.25rem;
+}
+
+.product-skeleton--desktop-quantity {
+  height: 2.25rem;
+  width: 7.5rem;
+  margin-bottom: 1rem;
+}
+
+.product-skeleton--desktop-cart {
+  height: 46px;
+  width: 100%;
+  border-radius: 0;
+}
 }
 
 .product-skeleton {
