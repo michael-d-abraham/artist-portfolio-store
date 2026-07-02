@@ -1,72 +1,103 @@
 <template>
-  <div class="product-page">
+  <div
+    class="product-page"
+    :class="{ 'product-page--overlay': overlay }"
+    @click="onDesktopBackdropClick"
+  >
     <p v-if="loading" class="product-page__status">Loading…</p>
     <p v-else-if="error" class="error product-page__status">{{ error }}</p>
 
     <!-- Mobile product layout -->
     <div v-else-if="product && isMobile" class="product-page__content product-page__content--mobile">
-      <ProductBreadcrumb label="Back to Gallery" back-to="/gallery" />
-      <button
-        type="button"
-        class="product-page__close"
-        aria-label="Close and return to gallery"
-        @click="goBackToGallery"
-      >
-        <span aria-hidden="true">×</span>
-      </button>
+      <ProductCloseButton
+        flush
+        back-to="/gallery"
+        :as-button="overlay"
+        @close="emit('close')"
+      />
       <ProductImageGallery :images="imageList" :image-alt="productTitle(product)" />
-      <ProductInfo :title="productTitle(product)" :price="formattedPrice" />
-      <SizeDropdown :size-label="product.size_label || ''" />
-      <ProductQuantityField
-        v-model="quantity"
-        :max="maxQuantity"
-        @increment="incrementQty"
-        @decrement="decrementQty"
-      />
-      <AddToCartButton
-        :label="addButtonLabel"
-        :disabled="!canBuy || added"
-        :aria-label="`Add ${productTitle(product)} to cart`"
-        @click="onAddToCart"
-      />
+      <div class="product-page__purchase">
+        <ProductInfo :title="productTitle(product)" :price="formattedPrice" />
+        <p v-if="showStock" class="product-page__availability">
+          Available: {{ product.quantity_available }}
+        </p>
+        <SizeDropdown :size-label="product.size_label || ''" />
+        <ProductQuantityField
+          v-model="quantity"
+          :max="maxQuantity"
+          @increment="incrementQty"
+          @decrement="decrementQty"
+        />
+        <AddToCartButton
+          :label="addButtonLabel"
+          :disabled="!canBuy || added"
+          :aria-label="`Add ${productTitle(product)} to cart`"
+          @click="onAddToCart"
+        />
+      </div>
       <ProductDescription :text="product.description || ''" />
     </div>
 
     <!-- Desktop layout -->
     <article v-else-if="product" class="detail detail--desktop">
-      <button
-        type="button"
-        class="product-page__close"
-        aria-label="Close and return to gallery"
-        @click="goBackToGallery"
-      >
-        <span aria-hidden="true">×</span>
-      </button>
-      <h1 class="page-title">{{ productTitle(product) }}</h1>
-      <p v-if="product.year_created != null" class="meta">Year: {{ product.year_created }}</p>
-      <p v-if="productFormat(product)" class="meta">Format: {{ productFormat(product) }}</p>
-      <p v-if="product.size_label" class="meta">Size: {{ product.size_label }}</p>
-
-      <p v-if="product.description" class="description">{{ product.description }}</p>
-
-      <ProductImageGallery
-        v-if="imageList.length"
-        class="detail__gallery"
-        :images="imageList"
-        :image-alt="productTitle(product)"
-      />
-
-      <p v-if="product.price_cents != null" class="price">
-        {{ formatMoneyFromCents(product.price_cents, product.currency || 'usd') }}
-      </p>
-      <p v-if="showStock" class="meta stock">Available: {{ product.quantity_available }}</p>
-
-      <div v-if="canBuy" class="buy-actions">
-        <AddToCartButton
-          :label="addButtonLabel"
-          :disabled="added"
-          @click="onAddToCart"
+      <div ref="detailCardRef" class="detail__card" @click="onDesktopCardBackdropClick">
+        <ProductCloseButton
+          class="detail__close"
+          flush
+          back-to="/gallery"
+          :label="imageLightboxOpen ? 'Close enlarged image' : 'Close and return to gallery'"
+          :as-button="overlay || imageLightboxOpen"
+          @close="onDesktopClose"
         />
+
+        <div
+          ref="detailGridRef"
+          class="detail__grid"
+          :class="{ 'detail__grid--lightbox-open': imageLightboxOpen }"
+        >
+          <div class="detail__media">
+            <ProductImageGallery
+              v-if="imageList.length"
+              ref="galleryRef"
+              class="detail__gallery"
+              :images="imageList"
+              :image-alt="productTitle(product)"
+              contained-lightbox
+              :lightbox-target="detailGridRef"
+              @lightbox-change="imageLightboxOpen = $event"
+            />
+          </div>
+
+          <div class="detail__info">
+            <h1 class="page-title">{{ productTitle(product) }}</h1>
+            <div v-if="hasDesktopMeta" class="detail__meta-group">
+              <p v-if="product.year_created != null" class="meta">Year: {{ product.year_created }}</p>
+              <p v-if="productFormat(product)" class="meta">Format: {{ productFormat(product) }}</p>
+              <p v-if="product.size_label" class="meta">Size: {{ product.size_label }}</p>
+            </div>
+
+            <div class="detail__purchase">
+              <p v-if="product.price_cents != null" class="price">
+                {{ formatMoneyFromCents(product.price_cents, product.currency || 'usd') }}
+              </p>
+              <p v-if="showStock" class="meta stock">Available: {{ product.quantity_available }}</p>
+              <ProductQuantityField
+                v-model="quantity"
+                :max="maxQuantity"
+                @increment="incrementQty"
+                @decrement="decrementQty"
+              />
+              <AddToCartButton
+                :label="addButtonLabel"
+                :disabled="!canBuy || added"
+                :aria-label="`Add ${productTitle(product)} to cart`"
+                @click="onAddToCart"
+              />
+            </div>
+
+            <ProductDescription :text="product.description || ''" />
+          </div>
+        </div>
       </div>
     </article>
   </div>
@@ -85,7 +116,7 @@ import {
   productTitle,
   productFormat
 } from '../utils/storefrontProduct.js';
-import ProductBreadcrumb from '../components/product/ProductBreadcrumb.vue';
+import ProductCloseButton from '../components/product/ProductCloseButton.vue';
 import ProductImageGallery from '../components/product/ProductImageGallery.vue';
 import ProductInfo from '../components/product/ProductInfo.vue';
 import SizeDropdown from '../components/product/SizeDropdown.vue';
@@ -97,11 +128,17 @@ const props = defineProps({
   slug: {
     type: String,
     required: true
+  },
+  overlay: {
+    type: Boolean,
+    default: false
   }
 });
 
-const router = useRouter();
+const emit = defineEmits(['close', 'lightbox-change']);
+
 const isMobile = useMediaQuery('(max-width: 640px)');
+const router = useRouter();
 const { openDrawer } = useCart();
 
 const product = ref(null);
@@ -109,6 +146,10 @@ const loading = ref(true);
 const error = ref('');
 const quantity = ref(1);
 const added = ref(false);
+const detailGridRef = ref(null);
+const detailCardRef = ref(null);
+const galleryRef = ref(null);
+const imageLightboxOpen = ref(false);
 
 const imageList = computed(() => {
   const imgs = product.value?.product_images;
@@ -131,6 +172,15 @@ const formattedPrice = computed(() => {
 const showStock = computed(() => {
   const q = product.value?.quantity_available;
   return q != null && typeof q === 'number';
+});
+
+const hasDesktopMeta = computed(() => {
+  if (!product.value) return false;
+  return (
+    product.value.year_created != null
+    || Boolean(productFormat(product.value))
+    || Boolean(product.value.size_label)
+  );
 });
 
 const maxQuantity = computed(() => {
@@ -163,6 +213,49 @@ function decrementQty() {
   quantity.value = Math.max(1, quantity.value - 1);
 }
 
+function onDesktopClose() {
+  if (imageLightboxOpen.value) {
+    galleryRef.value?.closeLightbox();
+    return;
+  }
+  if (props.overlay) {
+    emit('close');
+    return;
+  }
+  router.push({ name: 'gallery' });
+}
+
+function onDesktopCardBackdropClick(event) {
+  if (isMobile.value || !imageLightboxOpen.value) {
+    return;
+  }
+  const grid = detailGridRef.value;
+  if (!grid || grid.contains(event.target)) {
+    return;
+  }
+  if (event.target.closest('.product-close-button')) {
+    return;
+  }
+  closeImageLightbox();
+}
+
+function onDesktopBackdropClick(event) {
+  if (isMobile.value || !product.value) {
+    return;
+  }
+  const card = event.currentTarget.querySelector('.detail__card');
+  if (!card || card.contains(event.target)) {
+    return;
+  }
+  onDesktopClose();
+}
+
+function closeImageLightbox() {
+  galleryRef.value?.closeLightbox();
+}
+
+defineExpose({ closeImageLightbox });
+
 function onAddToCart() {
   if (!product.value || !canBuy.value) return;
   const result = addToCart(product.value);
@@ -175,16 +268,13 @@ function onAddToCart() {
   }, 1500);
 }
 
-function goBackToGallery() {
-  router.push('/gallery');
-}
-
 async function load() {
   loading.value = true;
   error.value = '';
   product.value = null;
   quantity.value = 1;
   added.value = false;
+  imageLightboxOpen.value = false;
   try {
     product.value = await getProductBySlug(props.slug);
   } catch (e) {
@@ -202,6 +292,10 @@ watch(maxQuantity, (max) => {
 
 onMounted(load);
 watch(() => props.slug, load);
+
+watch(imageLightboxOpen, (open) => {
+  emit('lightbox-change', open);
+});
 </script>
 
 <style scoped>
@@ -209,12 +303,71 @@ watch(() => props.slug, load);
   width: 100%;
 }
 
+.product-page--overlay {
+  min-height: 100%;
+}
+
 .product-page__content--mobile {
-  position: relative;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 12px 20px 48px;
+  padding: 8px 20px 40px;
+  overflow-x: hidden;
+}
+
+.product-page__purchase {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.product-page__availability {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.product-page__purchase :deep(.product-info),
+.product-page__purchase :deep(.size-dropdown),
+.product-page__purchase :deep(.product-quantity) {
+  margin-bottom: 0;
+}
+
+.product-page__purchase :deep(.qty-btn) {
+  width: 2rem;
+  height: 2rem;
+  min-width: 36px;
+  min-height: 36px;
+  font-size: 1rem;
+}
+
+.product-page__purchase :deep(.qty-input) {
+  width: 2rem;
+  min-height: 36px;
+  font-size: 0.9375rem;
+}
+
+.product-page__purchase :deep(.add-to-cart-button) {
+  height: 44px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-top: 0.125rem;
+}
+
+.product-page__content--mobile :deep(.product-close-button) {
+  margin-bottom: 0.25rem;
+}
+
+.product-page__content--mobile :deep(.product-image-gallery) {
+  margin-bottom: 0.5rem;
+}
+
+.product-page__content--mobile :deep(.product-description) {
+  margin-top: 1rem;
+  padding-top: 0.875rem;
 }
 
 .product-page__status {
@@ -223,101 +376,274 @@ watch(() => props.slug, load);
   color: var(--color-text-muted);
 }
 
-.product-page__close {
-  position: absolute;
-  top: 12px;
-  left: 20px;
-  z-index: 2;
-  width: 2.5rem;
-  height: 2.5rem;
-  padding: 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-  font-size: 1.75rem;
-  line-height: 1;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: color 0.15s ease, background-color 0.15s ease;
-}
-
-.product-page__close:hover {
-  color: var(--color-text);
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.product-page__close:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-
-.detail--desktop .product-page__close {
-  top: 0;
-  left: 0;
-}
-
 .detail--desktop {
-  position: relative;
-  padding-bottom: var(--space-3xl);
-  padding-top: 0.5rem;
-  max-width: 40rem;
-  margin: 0 auto;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.detail__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+}
+
+.detail__media {
+  min-width: 0;
+}
+
+.detail__info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .detail--desktop .page-title {
-  margin-bottom: var(--space-lg);
-  text-align: center;
-  font-size: clamp(0.9375rem, 2.5vw, 1.125rem);
-  font-weight: 400;
-  letter-spacing: 0.1em;
+  margin: 0 0 0.5rem;
+  text-align: left;
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+}
+
+.detail__meta-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.25rem;
 }
 
 .meta {
   color: var(--color-text-muted);
-  margin: 0.35rem 0;
+  margin: 0;
   font-size: 0.8125rem;
   font-weight: 300;
-  text-align: center;
+  text-align: left;
   letter-spacing: 0.04em;
 }
 
-.description {
-  margin-top: var(--space-xl);
-  white-space: pre-wrap;
-  line-height: 1.7;
-  font-weight: 300;
-  font-size: 0.9375rem;
+.detail__purchase {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
 }
 
-.detail__gallery {
-  margin-top: var(--space-xl);
+.detail__purchase :deep(.product-quantity) {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.detail__purchase :deep(.add-to-cart-button) {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.detail__info :deep(.product-description) {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
 }
 
 .price {
-  margin-top: var(--space-xl);
-  font-weight: 400;
-  font-size: 0.875rem;
-  letter-spacing: 0.06em;
-  text-align: center;
+  margin: 0;
+  font-weight: 500;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-align: left;
 }
 
 .stock {
   font-size: 0.8125rem;
-  text-align: center;
+  text-align: left;
 }
 
-.buy-actions {
-  margin-top: var(--space-xl);
-  display: flex;
-  justify-content: center;
-}
+@media (min-width: 641px) {
+  .product-page:has(.detail--desktop) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 48px;
+  }
 
-.buy-actions :deep(.add-to-cart-button) {
-  min-width: 12rem;
+  .product-page:has(.detail--desktop):not(.product-page--overlay) {
+    min-height: calc(100dvh - 7rem);
+  }
+
+  .product-page--overlay:has(.detail--desktop) {
+    min-height: 100%;
+    padding: 0;
+  }
+
+  .detail--desktop {
+    width: min(1180px, calc(100vw - 96px));
+    height: min(760px, calc(100vh - 96px));
+    max-width: none;
+    margin: 0;
+  }
+
+  .product-page:not(.product-page--overlay):has(.detail--desktop) .detail--desktop {
+    height: min(760px, calc(100dvh - 10rem));
+  }
+
+  .product-page:not(.product-page--overlay):has(.detail--desktop) {
+    padding: 24px 48px;
+  }
+
+  .detail__card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .product-page--overlay .detail__card {
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  }
+
+  .detail__close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 21;
+    margin: 0;
+  }
+
+  .detail__grid--lightbox-open .detail__info {
+    visibility: hidden;
+  }
+
+  .detail__grid {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    position: relative;
+    grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.85fr);
+    gap: 40px;
+    align-items: stretch;
+    padding: 40px 56px 40px 40px;
+    box-sizing: border-box;
+  }
+
+  .detail__media {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .detail__media :deep(.product-image-gallery) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    margin-bottom: 0;
+  }
+
+  .detail__media :deep(.product-image-gallery__stage) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .detail__media :deep(.product-image-gallery__viewport) {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .detail__media :deep(.product-image-gallery__nav--inline.product-image-gallery__nav--prev) {
+    left: 8px;
+    right: auto;
+    margin-right: 0;
+  }
+
+  .detail__media :deep(.product-image-gallery__nav--inline.product-image-gallery__nav--next) {
+    right: 8px;
+    left: auto;
+    margin-left: 0;
+  }
+
+  .detail__media :deep(.product-image-gallery__dots) {
+    margin-top: 12px;
+    flex-shrink: 0;
+  }
+
+  .detail__info {
+    justify-content: flex-start;
+    gap: 0;
+    padding-top: 4px;
+    padding-right: 4px;
+    overflow-y: auto;
+  }
+
+  .detail--desktop .page-title {
+    font-size: 1.375rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.625rem;
+    padding-right: 2rem;
+  }
+
+  .detail__meta-group {
+    gap: 0.3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .meta {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--color-text);
+    opacity: 0.72;
+  }
+
+  .detail__purchase {
+    gap: 1rem;
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+  }
+
+  .detail__purchase :deep(.product-quantity__label) {
+    font-size: 0.75rem;
+  }
+
+  .detail__purchase :deep(.add-to-cart-button) {
+    height: 46px;
+    font-size: 1rem;
+  }
+
+  .detail__info :deep(.product-description) {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+  }
+
+  .detail__info :deep(.product-description__text) {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+  }
+
+  .price {
+    font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  .stock {
+    font-size: 0.875rem;
+    opacity: 0.72;
+  }
 }
 
 @media (max-width: 390px) {
@@ -325,10 +651,6 @@ watch(() => props.slug, load);
   .product-page__status {
     padding-left: 16px;
     padding-right: 16px;
-  }
-
-  .product-page__close {
-    left: 16px;
   }
 }
 </style>

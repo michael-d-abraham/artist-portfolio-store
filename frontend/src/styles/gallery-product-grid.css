@@ -32,6 +32,12 @@
   width: 100%;
   text-decoration: none;
   color: inherit;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: inherit;
 }
 
 .product-grid--gallery .product-card-link:hover {

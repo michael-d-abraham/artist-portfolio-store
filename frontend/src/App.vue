@@ -94,8 +94,11 @@ const headerHidden = ref(false);
 
 const isAdminRoute = computed(() => route.path.startsWith('/admin'));
 const isHomeRoute = computed(() => route.name === 'home');
+const isGalleryProductOpen = computed(
+  () => route.name === 'gallery' && typeof route.query.product === 'string' && Boolean(route.query.product)
+);
 const isProductMobile = computed(
-  () => isMobile.value && route.name === 'product-detail'
+  () => isMobile.value && (route.name === 'product-detail' || isGalleryProductOpen.value)
 );
 
 let lastScrollY = 0;
@@ -521,6 +524,7 @@ const showSocialFooter = computed(() => {
 
   .app-main--product-mobile {
     padding: 0;
+    overflow-x: hidden;
   }
 
   .mobile-menu-toggle {

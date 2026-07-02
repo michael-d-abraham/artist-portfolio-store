@@ -15,6 +15,8 @@
               :key="p._id"
               :product="p"
               :show-add-to-cart="false"
+              navigation-mode="emit"
+              @open="openProduct"
             />
           </div>
 
@@ -26,15 +28,26 @@
         </div>
       </section>
     </template>
+
+    <ProductDetailOverlay
+      v-if="activeProductSlug"
+      :slug="activeProductSlug"
+      @close="closeProduct"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { getProducts } from '../services/api.js';
 import GalleryProductCard from '../components/product/GalleryProductCard.vue';
+import ProductDetailOverlay from '../components/product/ProductDetailOverlay.vue';
 
 const PAGE_SIZE = 8;
+
+const route = useRoute();
+const router = useRouter();
 
 const products = ref([]);
 const loading = ref(true);
@@ -43,6 +56,26 @@ const visibleCount = ref(PAGE_SIZE);
 
 const visibleProducts = computed(() => products.value.slice(0, visibleCount.value));
 const hasMore = computed(() => visibleCount.value < products.value.length);
+
+// Future prev/next in overlay: pass visibleProducts (or products) slugs into
+// ProductDetailOverlay and navigate with router.push({ query: { product: nextSlug } }).
+
+const activeProductSlug = computed(() => {
+  const product = route.query.product;
+  return typeof product === 'string' && product ? product : null;
+});
+
+function openProduct(slug) {
+  router.push({ name: 'gallery', query: { product: slug } });
+}
+
+function closeProduct() {
+  if (window.history.state?.back != null) {
+    router.back();
+    return;
+  }
+  router.replace({ name: 'gallery' });
+}
 
 function loadMore() {
   visibleCount.value = Math.min(visibleCount.value + PAGE_SIZE, products.value.length);

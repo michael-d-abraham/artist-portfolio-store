@@ -20,23 +20,23 @@ defineProps({
 
 <style scoped>
 .product-info {
-  margin-bottom: var(--space-lg);
+  margin-bottom: 0;
 }
 
 .product-info__title {
-  margin: 0 0 10px;
-  font-size: 1.125rem;
-  font-weight: 700;
-  line-height: 1.35;
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--color-text);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
 }
 
 .product-info__price {
   margin: 0;
-  font-size: 1.125rem;
-  font-weight: 700;
+  font-size: 0.9375rem;
+  font-weight: 500;
   line-height: 1.3;
-  color: #444;
+  color: var(--color-text-muted);
 }
 </style>

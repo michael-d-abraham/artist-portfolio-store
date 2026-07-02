@@ -22,23 +22,24 @@ const inputId = useId();
 
 <style scoped>
 .size-dropdown {
-  margin-bottom: var(--space-lg);
+  margin-bottom: 0;
 }
 
 .size-dropdown__label {
   display: block;
-  margin-bottom: var(--space-sm);
-  font-size: 0.8125rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.6875rem;
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-text);
+  color: var(--color-text-muted);
 }
 
 .size-dropdown__select {
   width: 100%;
-  min-height: 44px;
-  padding: 0.65rem 0.6rem;
+  min-height: 40px;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.875rem;
   appearance: none;
   background: var(--color-surface);
   color: var(--color-text);

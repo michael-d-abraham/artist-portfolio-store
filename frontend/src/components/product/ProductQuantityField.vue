@@ -40,16 +40,16 @@ defineEmits(['update:modelValue', 'increment', 'decrement']);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-lg);
+  gap: 0.35rem;
+  margin-bottom: 0;
 }
 
 .product-quantity__label {
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-text);
+  color: var(--color-text-muted);
 }
 
 .product-quantity__required {
