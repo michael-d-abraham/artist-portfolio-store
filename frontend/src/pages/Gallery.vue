@@ -32,6 +32,7 @@
     <ProductDetailOverlay
       v-if="activeProductSlug"
       :slug="activeProductSlug"
+      :initial-product="activeInitialProduct"
       @close="closeProduct"
     />
   </div>
@@ -63,6 +64,13 @@ const hasMore = computed(() => visibleCount.value < products.value.length);
 const activeProductSlug = computed(() => {
   const product = route.query.product;
   return typeof product === 'string' && product ? product : null;
+});
+
+const activeInitialProduct = computed(() => {
+  if (!activeProductSlug.value) {
+    return null;
+  }
+  return products.value.find((p) => p.slug === activeProductSlug.value) ?? null;
 });
 
 function openProduct(slug) {

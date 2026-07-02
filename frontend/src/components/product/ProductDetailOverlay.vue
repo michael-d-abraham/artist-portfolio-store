@@ -13,6 +13,7 @@
           <ProductDetail
             ref="productDetailRef"
             :slug="slug"
+            :initial-product="initialProduct"
             overlay
             @close="emit('close')"
             @lightbox-change="galleryLightboxOpen = $event"
@@ -34,6 +35,10 @@ const props = defineProps({
   slug: {
     type: String,
     required: true
+  },
+  initialProduct: {
+    type: Object,
+    default: null
   },
   open: {
     type: Boolean,
@@ -84,7 +89,9 @@ watch(
       window.addEventListener('keydown', onEscape);
       await nextTick();
       if (!galleryLightboxOpen.value) {
-        const backControl = panelRef.value?.querySelector('.product-close-button');
+        const backControl = panelRef.value?.querySelector(
+          '.product-floating-circle-button--fixed-top-left, .product-close-button'
+        );
         backControl?.focus();
       }
     } else {
@@ -128,6 +135,14 @@ onUnmounted(() => {
   overscroll-behavior-x: none;
 }
 
+@media (max-width: 640px) {
+  .product-detail-overlay {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
+  }
+}
+
 @media (min-width: 641px) {
   .product-detail-overlay {
     background: #f4f4f4;
@@ -152,5 +167,34 @@ onUnmounted(() => {
 .product-overlay-enter-from,
 .product-overlay-leave-to {
   opacity: 0;
+}
+
+@media (max-width: 640px) {
+  .product-detail-overlay {
+    will-change: opacity, transform;
+  }
+
+  .product-overlay-enter-active,
+  .product-overlay-leave-active {
+    transition: opacity 0.1s ease, transform 0.1s ease;
+  }
+
+  .product-overlay-enter-from,
+  .product-overlay-leave-to {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-overlay-enter-active,
+  .product-overlay-leave-active {
+    transition: opacity 0.01ms linear;
+  }
+
+  .product-overlay-enter-from,
+  .product-overlay-leave-to {
+    transform: none;
+  }
 }
 </style>

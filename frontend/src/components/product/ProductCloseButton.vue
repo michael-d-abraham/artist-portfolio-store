@@ -1,5 +1,15 @@
 <template>
+  <ProductFloatingCircleButton
+    v-if="variant === 'floating'"
+    placement="fixed-top-left"
+    size="lg"
+    :aria-label="label"
+    @click="onActivate"
+  >
+    <span class="product-close-button__icon product-close-button__icon--floating" aria-hidden="true">×</span>
+  </ProductFloatingCircleButton>
   <component
+    v-else
     :is="asButton ? 'button' : 'router-link'"
     :to="asButton ? undefined : backTo"
     type="button"
@@ -13,6 +23,8 @@
 </template>
 
 <script setup>
+import ProductFloatingCircleButton from './ProductFloatingCircleButton.vue';
+
 const props = defineProps({
   label: {
     type: String,
@@ -29,6 +41,11 @@ const props = defineProps({
   flush: {
     type: Boolean,
     default: false
+  },
+  variant: {
+    type: String,
+    default: 'default',
+    validator: (value) => value === 'default' || value === 'floating'
   }
 });
 
@@ -82,5 +99,10 @@ function onActivate(event) {
   font-size: 1.75rem;
   line-height: 1;
   font-weight: 300;
+}
+
+.product-close-button__icon--floating {
+  font-size: 1.625rem;
+  font-weight: 400;
 }
 </style>

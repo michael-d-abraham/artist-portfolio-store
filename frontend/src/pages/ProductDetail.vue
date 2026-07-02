@@ -4,10 +4,102 @@
     :class="{ 'product-page--overlay': overlay }"
     @click="onDesktopBackdropClick"
   >
-    <p v-if="loading" class="product-page__status">Loading…</p>
-    <p v-else-if="error" class="error product-page__status">{{ error }}</p>
+    <p v-if="showFullPageLoader" class="product-page__status">Loading…</p>
+    <p v-else-if="error && !product" class="error product-page__status">{{ error }}</p>
 
-    <!-- Mobile product layout -->
+    <!-- Mobile overlay: shell renders immediately; skeletons fill gaps while fetching -->
+    <div
+      v-else-if="overlay && isMobile"
+      class="product-page__content product-page__content--mobile product-page__content--overlay"
+    >
+      <ProductCloseButton
+        variant="floating"
+        flush
+        back-to="/gallery"
+        :as-button="true"
+        @close="emit('close')"
+      />
+
+      <ProductImageGallery
+        v-if="imageList.length"
+        ref="galleryRef"
+        priority
+        :images="imageList"
+        :image-alt="product ? productTitle(product) : 'Product image'"
+        @lightbox-change="imageLightboxOpen = $event"
+      />
+      <div v-else class="product-skeleton product-skeleton--image" aria-hidden="true" />
+
+      <div class="product-page__details">
+        <div class="product-page__purchase">
+          <ProductInfo
+            v-if="product"
+            :title="productTitle(product)"
+            :price="formattedPrice"
+          />
+          <div v-else class="product-skeleton-group" aria-hidden="true">
+            <div class="product-skeleton product-skeleton--title" />
+            <div class="product-skeleton product-skeleton--price" />
+          </div>
+
+          <p v-if="showStock" class="product-page__availability">
+            Available: {{ product.quantity_available }}
+          </p>
+          <div
+            v-else-if="!product"
+            class="product-skeleton product-skeleton--availability"
+            aria-hidden="true"
+          />
+
+          <SizeDropdown v-if="product" :size-label="product.size_label || ''" />
+          <div
+            v-else
+            class="product-skeleton product-skeleton--size"
+            aria-hidden="true"
+          />
+
+          <ProductQuantityField
+            v-if="product"
+            v-model="quantity"
+            :max="maxQuantity"
+            @increment="incrementQty"
+            @decrement="decrementQty"
+          />
+          <div
+            v-else
+            class="product-skeleton product-skeleton--quantity"
+            aria-hidden="true"
+          />
+
+          <AddToCartButton
+            v-if="product"
+            :label="addButtonLabel"
+            :disabled="!canBuy || added"
+            :aria-label="`Add ${productTitle(product)} to cart`"
+            @click="onAddToCart"
+          />
+          <div
+            v-else
+            class="product-skeleton product-skeleton--cart"
+            aria-hidden="true"
+          />
+        </div>
+
+        <ProductDescription v-if="product?.description" :text="product.description" />
+        <div
+          v-else-if="!product"
+          class="product-skeleton-group product-skeleton-group--description"
+          aria-hidden="true"
+        >
+          <div class="product-skeleton product-skeleton--line" />
+          <div class="product-skeleton product-skeleton--line product-skeleton--line-short" />
+        </div>
+      </div>
+
+      <p v-if="error" class="error product-page__inline-error">{{ error }}</p>
+    </div>
+
+    <!-- Mobile standalone page -->
     <div v-else-if="product && isMobile" class="product-page__content product-page__content--mobile">
       <ProductCloseButton
         flush
@@ -15,27 +107,34 @@
         :as-button="overlay"
         @close="emit('close')"
       />
-      <ProductImageGallery :images="imageList" :image-alt="productTitle(product)" />
-      <div class="product-page__purchase">
-        <ProductInfo :title="productTitle(product)" :price="formattedPrice" />
-        <p v-if="showStock" class="product-page__availability">
-          Available: {{ product.quantity_available }}
-        </p>
-        <SizeDropdown :size-label="product.size_label || ''" />
-        <ProductQuantityField
-          v-model="quantity"
-          :max="maxQuantity"
-          @increment="incrementQty"
-          @decrement="decrementQty"
-        />
-        <AddToCartButton
-          :label="addButtonLabel"
-          :disabled="!canBuy || added"
-          :aria-label="`Add ${productTitle(product)} to cart`"
-          @click="onAddToCart"
-        />
+      <ProductImageGallery
+        :images="imageList"
+        ref="galleryRef"
+        :image-alt="productTitle(product)"
+        @lightbox-change="imageLightboxOpen = $event"
+      />
+      <div class="product-page__details">
+        <div class="product-page__purchase">
+          <ProductInfo :title="productTitle(product)" :price="formattedPrice" />
+          <p v-if="showStock" class="product-page__availability">
+            Available: {{ product.quantity_available }}
+          </p>
+          <SizeDropdown :size-label="product.size_label || ''" />
+          <ProductQuantityField
+            v-model="quantity"
+            :max="maxQuantity"
+            @increment="incrementQty"
+            @decrement="decrementQty"
+          />
+          <AddToCartButton
+            :label="addButtonLabel"
+            :disabled="!canBuy || added"
+            :aria-label="`Add ${productTitle(product)} to cart`"
+            @click="onAddToCart"
+          />
+        </div>
+        <ProductDescription :text="product.description || ''" />
       </div>
-      <ProductDescription :text="product.description || ''" />
     </div>
 
     <!-- Desktop layout -->
@@ -132,6 +231,10 @@ const props = defineProps({
   overlay: {
     type: Boolean,
     default: false
+  },
+  initialProduct: {
+    type: Object,
+    default: null
   }
 });
 
@@ -141,8 +244,16 @@ const isMobile = useMediaQuery('(max-width: 640px)');
 const router = useRouter();
 const { openDrawer } = useCart();
 
-const product = ref(null);
-const loading = ref(true);
+function resolveCachedProduct(slug) {
+  if (props.initialProduct?.slug === slug) {
+    return props.initialProduct;
+  }
+  return null;
+}
+
+const cachedProduct = resolveCachedProduct(props.slug);
+const product = ref(cachedProduct);
+const loading = ref(!cachedProduct);
 const error = ref('');
 const quantity = ref(1);
 const added = ref(false);
@@ -205,6 +316,10 @@ const addButtonLabel = computed(() => {
   return 'Add to Cart';
 });
 
+const showFullPageLoader = computed(
+  () => loading.value && !(props.overlay && isMobile.value)
+);
+
 function incrementQty() {
   quantity.value = Math.min(maxQuantity.value, quantity.value + 1);
 }
@@ -233,7 +348,7 @@ function onDesktopCardBackdropClick(event) {
   if (!grid || grid.contains(event.target)) {
     return;
   }
-  if (event.target.closest('.product-close-button')) {
+  if (event.target.closest('.product-close-button, .product-floating-circle-button')) {
     return;
   }
   closeImageLightbox();
@@ -269,16 +384,28 @@ function onAddToCart() {
 }
 
 async function load() {
-  loading.value = true;
+  const cached = resolveCachedProduct(props.slug);
+  const hadCache = Boolean(cached);
+
   error.value = '';
-  product.value = null;
   quantity.value = 1;
   added.value = false;
   imageLightboxOpen.value = false;
+
+  if (cached) {
+    product.value = cached;
+    loading.value = false;
+  } else {
+    loading.value = true;
+    product.value = null;
+  }
+
   try {
     product.value = await getProductBySlug(props.slug);
   } catch (e) {
-    error.value = e.status === 404 ? 'Product not found.' : e.message || 'Failed to load product';
+    if (!hadCache) {
+      error.value = e.status === 404 ? 'Product not found.' : e.message || 'Failed to load product';
+    }
   } finally {
     loading.value = false;
   }
@@ -564,18 +691,6 @@ watch(imageLightboxOpen, (open) => {
     min-height: 0;
   }
 
-  .detail__media :deep(.product-image-gallery__nav--inline.product-image-gallery__nav--prev) {
-    left: 8px;
-    right: auto;
-    margin-right: 0;
-  }
-
-  .detail__media :deep(.product-image-gallery__nav--inline.product-image-gallery__nav--next) {
-    right: 8px;
-    left: auto;
-    margin-left: 0;
-  }
-
   .detail__media :deep(.product-image-gallery__dots) {
     margin-top: 12px;
     flex-shrink: 0;
@@ -646,11 +761,155 @@ watch(imageLightboxOpen, (open) => {
   }
 }
 
+@media (max-width: 640px) {
+  .product-page--overlay .product-page__content--overlay {
+    padding-top: 0;
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .product-page--overlay .product-page__content--overlay :deep(.product-image-gallery) {
+    margin-bottom: 0.5rem;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 3.5rem);
+  }
+
+  .product-page--overlay .product-skeleton--image {
+    width: 100%;
+    height: min(50svh, 380px);
+    min-height: min(50svh, 380px);
+    max-height: min(50svh, 380px);
+    margin-top: calc(env(safe-area-inset-top, 0px) + 3.5rem);
+  }
+
+  .product-page--overlay .product-page__content--overlay :deep(.product-image-gallery__enlarge) {
+    right: 6px;
+    bottom: 6px;
+  }
+
+  .product-page__content--mobile:not(.product-page__content--overlay) :deep(.product-image-gallery) {
+    padding-top: 1.25rem;
+  }
+
+  .product-page--overlay .product-page__details {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .product-page--overlay .product-page__purchase {
+    margin-top: 0;
+    gap: 0.375rem;
+  }
+
+  .product-page--overlay .product-page__details :deep(.product-description) {
+    margin-top: 0.625rem;
+    padding-top: 0.625rem;
+  }
+
+  .product-page--overlay .product-page__purchase :deep(.add-to-cart-button) {
+    margin-top: 0.25rem;
+  }
+
+  .product-page__inline-error {
+    margin: 0.75rem 0 0;
+    font-size: 0.875rem;
+    text-align: center;
+  }
+}
+
+.product-skeleton {
+  background: linear-gradient(90deg, #f2f2f2 0%, #e8e8e8 50%, #f2f2f2 100%);
+  background-size: 200% 100%;
+  animation: product-skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.product-skeleton--image {
+  background-color: var(--color-product-image-bg, #f8f8f8);
+  animation: none;
+}
+
+.product-skeleton--title {
+  height: 1.125rem;
+  width: 72%;
+  margin-bottom: 0.375rem;
+}
+
+.product-skeleton--price {
+  height: 0.9375rem;
+  width: 28%;
+}
+
+.product-skeleton--availability {
+  height: 0.8125rem;
+  width: 40%;
+}
+
+.product-skeleton--size {
+  height: 2.25rem;
+  width: 100%;
+  border-radius: 0;
+}
+
+.product-skeleton--quantity {
+  height: 2.25rem;
+  width: 7.5rem;
+}
+
+.product-skeleton--cart {
+  height: 44px;
+  width: 100%;
+  border-radius: 0;
+}
+
+.product-skeleton-group--description {
+  margin-top: 0.625rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.product-skeleton--line {
+  height: 0.875rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.product-skeleton--line-short {
+  width: 65%;
+  margin-bottom: 0;
+}
+
+.product-skeleton-group {
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes product-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-skeleton {
+    animation: none;
+    background: #ececec;
+  }
+}
+
 @media (max-width: 390px) {
   .product-page__content--mobile,
   .product-page__status {
     padding-left: 16px;
     padding-right: 16px;
+  }
+
+  .product-page--overlay .product-page__content--overlay {
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
 }
 </style>
