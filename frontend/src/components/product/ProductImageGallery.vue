@@ -1,59 +1,60 @@
 <template>
   <div class="product-image-gallery">
-    <div
-      ref="viewportRef"
-      class="product-image-gallery__viewport"
-      :class="{ 'product-image-gallery__viewport--swipeable': canSwipe }"
-      @touchstart.passive="onTouchStart"
-      @touchend.passive="onTouchEnd"
-      @pointerdown="onPointerDown"
-      @pointerup="onPointerUp"
-      @pointercancel="onPointerUp"
-    >
-      <img
-        v-if="currentImage"
-        class="product-image-gallery__image"
-        :src="currentImage.image_url"
-        :alt="currentImage.alt_text || imageAlt"
-      />
-      <p v-else class="product-image-gallery__empty">No image</p>
-
+    <div class="product-image-gallery__stage">
       <button
         v-if="canSwipe"
         type="button"
-        class="product-image-gallery__nav product-image-gallery__nav--prev"
+        class="product-image-gallery__nav product-image-gallery__nav--prev product-image-gallery__nav--inline"
         :disabled="!canGoPrev"
         aria-label="Previous image"
         @click.stop="goPrev"
       >
         ‹
       </button>
+      <div
+        ref="viewportRef"
+        class="product-image-gallery__viewport"
+        :class="{ 'product-image-gallery__viewport--swipeable': canSwipe }"
+        @touchstart.passive="onTouchStart"
+        @touchend.passive="onTouchEnd"
+        @pointerdown="onPointerDown"
+        @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
+      >
+        <img
+          v-if="currentImage"
+          class="product-image-gallery__image"
+          :src="currentImage.image_url"
+          :alt="currentImage.alt_text || imageAlt"
+        />
+        <p v-else class="product-image-gallery__empty">No image</p>
+
+        <button
+          v-if="currentImage && images.length"
+          type="button"
+          class="product-image-gallery__enlarge"
+          aria-label="View larger image"
+          @click="lightboxOpen = true"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+      </div>
       <button
         v-if="canSwipe"
         type="button"
-        class="product-image-gallery__nav product-image-gallery__nav--next"
+        class="product-image-gallery__nav product-image-gallery__nav--next product-image-gallery__nav--inline"
         :disabled="!canGoNext"
         aria-label="Next image"
         @click.stop="goNext"
       >
         ›
-      </button>
-
-      <button
-        v-if="currentImage && images.length"
-        type="button"
-        class="product-image-gallery__enlarge"
-        aria-label="View larger image"
-        @click="lightboxOpen = true"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path
-            d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-          />
-        </svg>
       </button>
     </div>
 
@@ -89,31 +90,33 @@
           <button type="button" class="product-image-gallery__lightbox-close" aria-label="Close" @click="lightboxOpen = false">
             ×
           </button>
-          <button
-            v-if="canSwipe"
-            type="button"
-            class="product-image-gallery__nav product-image-gallery__nav--prev product-image-gallery__nav--lightbox"
-            :disabled="!canGoPrev"
-            aria-label="Previous image"
-            @click.stop="goPrev"
-          >
-            ‹
-          </button>
-          <button
-            v-if="canSwipe"
-            type="button"
-            class="product-image-gallery__nav product-image-gallery__nav--next product-image-gallery__nav--lightbox"
-            :disabled="!canGoNext"
-            aria-label="Next image"
-            @click.stop="goNext"
-          >
-            ›
-          </button>
-          <img
-            class="product-image-gallery__lightbox-img"
-            :src="currentImage.image_url"
-            :alt="currentImage.alt_text || imageAlt"
-          />
+          <div class="product-image-gallery__lightbox-stage">
+            <button
+              v-if="canSwipe"
+              type="button"
+              class="product-image-gallery__nav product-image-gallery__nav--prev product-image-gallery__nav--lightbox"
+              :disabled="!canGoPrev"
+              aria-label="Previous image"
+              @click.stop="goPrev"
+            >
+              ‹
+            </button>
+            <img
+              class="product-image-gallery__lightbox-img"
+              :src="currentImage.image_url"
+              :alt="currentImage.alt_text || imageAlt"
+            />
+            <button
+              v-if="canSwipe"
+              type="button"
+              class="product-image-gallery__nav product-image-gallery__nav--next product-image-gallery__nav--lightbox"
+              :disabled="!canGoNext"
+              aria-label="Next image"
+              @click.stop="goNext"
+            >
+              ›
+            </button>
+          </div>
         </div>
       </Transition>
     </Teleport>
@@ -226,6 +229,11 @@ function onPointerUp(event) {
   margin-bottom: var(--space-lg);
 }
 
+.product-image-gallery__stage {
+  position: relative;
+  width: 100%;
+}
+
 .product-image-gallery__viewport {
   position: relative;
   width: 100%;
@@ -274,16 +282,9 @@ function onPointerUp(event) {
 }
 
 .product-image-gallery__nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-  width: 48px;
-  height: 100%;
-  max-height: 120px;
   padding: 0;
   border: none;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(180, 180, 180, 0.12);
   box-shadow: none;
   color: var(--color-text);
   font-size: 2.25rem;
@@ -294,19 +295,30 @@ function onPointerUp(event) {
   justify-content: center;
   cursor: pointer;
   pointer-events: auto;
+  transition: background-color 0.18s ease;
 }
 
-.product-image-gallery__nav--prev {
-  left: 0;
+.product-image-gallery__nav--inline {
+  position: absolute;
+  top: 50%;
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  transform: translateY(-50%);
 }
 
-.product-image-gallery__nav--next {
-  right: 0;
+.product-image-gallery__nav--inline.product-image-gallery__nav--prev {
+  right: 100%;
+  margin-right: 6px;
+}
+
+.product-image-gallery__nav--inline.product-image-gallery__nav--next {
+  left: 100%;
+  margin-left: 6px;
 }
 
 .product-image-gallery__nav:hover:not(:disabled) {
-  opacity: 0.55;
-  background: transparent;
+  background: rgba(200, 200, 200, 0.4);
 }
 
 .product-image-gallery__nav:disabled {
@@ -387,6 +399,13 @@ function onPointerUp(event) {
 }
 
 .product-image-gallery__nav--lightbox {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 48px;
+  height: 100%;
+  max-height: 120px;
   color: var(--color-text);
 }
 

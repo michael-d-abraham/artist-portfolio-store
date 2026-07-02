@@ -436,7 +436,7 @@ const showSocialFooter = computed(() => {
 .app-footer {
   flex-shrink: 0;
   margin-top: auto;
-  padding: var(--space-2xl) var(--space-lg) var(--space-3xl);
+  padding: var(--space-md) var(--space-lg) 1.25rem;
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
 }
@@ -452,7 +452,7 @@ const showSocialFooter = computed(() => {
 }
 
 .app-footer__copyright {
-  margin: var(--space-lg) 0 0;
+  margin: 0.75rem 0 0;
   font-size: 0.8125rem;
   font-weight: 400;
   letter-spacing: 0.08em;
@@ -567,7 +567,7 @@ const showSocialFooter = computed(() => {
   }
 
   .app-footer {
-    padding: var(--space-md) 20px var(--space-md);
+    padding: var(--space-xs) 20px var(--space-xs);
   }
 
   .app-footer__copyright {
@@ -597,7 +597,7 @@ const showSocialFooter = computed(() => {
   }
 
   .app-footer {
-    padding: var(--space-sm) 16px var(--space-md);
+    padding: 0.125rem 16px var(--space-xs);
   }
 }
 </style>

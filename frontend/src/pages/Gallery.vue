@@ -9,13 +9,12 @@
     <template v-else>
       <section class="gallery-section" aria-label="Product gallery">
         <div class="gallery-container mobile-safe-container">
-          <div class="product-grid">
+          <div class="product-grid product-grid--gallery">
             <GalleryProductCard
               v-for="p in visibleProducts"
               :key="p._id"
               :product="p"
-              :show-added="addedId === p._id"
-              @added="onProductAdded"
+              :show-add-to-cart="false"
             />
           </div>
 
@@ -33,31 +32,17 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { getProducts } from '../services/api.js';
-import { useCart } from '../composables/useCart.js';
 import GalleryProductCard from '../components/product/GalleryProductCard.vue';
-
-const { openDrawer } = useCart();
 
 const PAGE_SIZE = 8;
 
 const products = ref([]);
 const loading = ref(true);
 const error = ref('');
-const addedId = ref(null);
 const visibleCount = ref(PAGE_SIZE);
 
 const visibleProducts = computed(() => products.value.slice(0, visibleCount.value));
 const hasMore = computed(() => visibleCount.value < products.value.length);
-
-function onProductAdded(p) {
-  openDrawer();
-  addedId.value = p._id;
-  window.setTimeout(() => {
-    if (addedId.value === p._id) {
-      addedId.value = null;
-    }
-  }, 1500);
-}
 
 function loadMore() {
   visibleCount.value = Math.min(visibleCount.value + PAGE_SIZE, products.value.length);

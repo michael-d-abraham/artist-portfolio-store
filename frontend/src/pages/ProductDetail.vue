@@ -6,6 +6,14 @@
     <!-- Mobile product layout -->
     <div v-else-if="product && isMobile" class="product-page__content product-page__content--mobile">
       <ProductBreadcrumb label="Back to Gallery" back-to="/gallery" />
+      <button
+        type="button"
+        class="product-page__close"
+        aria-label="Close and return to gallery"
+        @click="goBackToGallery"
+      >
+        <span aria-hidden="true">×</span>
+      </button>
       <ProductImageGallery :images="imageList" :image-alt="productTitle(product)" />
       <ProductInfo :title="productTitle(product)" :price="formattedPrice" />
       <SizeDropdown :size-label="product.size_label || ''" />
@@ -26,6 +34,14 @@
 
     <!-- Desktop layout -->
     <article v-else-if="product" class="detail detail--desktop">
+      <button
+        type="button"
+        class="product-page__close"
+        aria-label="Close and return to gallery"
+        @click="goBackToGallery"
+      >
+        <span aria-hidden="true">×</span>
+      </button>
       <h1 class="page-title">{{ productTitle(product) }}</h1>
       <p v-if="product.year_created != null" class="meta">Year: {{ product.year_created }}</p>
       <p v-if="productFormat(product)" class="meta">Format: {{ productFormat(product) }}</p>
@@ -58,6 +74,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { getProductBySlug } from '../services/api.js';
 import { addToCart, setCartQuantity } from '../utils/cart.js';
 import { CART_QUANTITY_MAX } from '@shared/cartQuantity.js';
@@ -83,6 +100,7 @@ const props = defineProps({
   }
 });
 
+const router = useRouter();
 const isMobile = useMediaQuery('(max-width: 640px)');
 const { openDrawer } = useCart();
 
@@ -157,6 +175,10 @@ function onAddToCart() {
   }, 1500);
 }
 
+function goBackToGallery() {
+  router.push('/gallery');
+}
+
 async function load() {
   loading.value = true;
   error.value = '';
@@ -188,6 +210,7 @@ watch(() => props.slug, load);
 }
 
 .product-page__content--mobile {
+  position: relative;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
@@ -200,8 +223,47 @@ watch(() => props.slug, load);
   color: var(--color-text-muted);
 }
 
+.product-page__close {
+  position: absolute;
+  top: 12px;
+  left: 20px;
+  z-index: 2;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.product-page__close:hover {
+  color: var(--color-text);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.product-page__close:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.detail--desktop .product-page__close {
+  top: 0;
+  left: 0;
+}
+
 .detail--desktop {
+  position: relative;
   padding-bottom: var(--space-3xl);
+  padding-top: 0.5rem;
   max-width: 40rem;
   margin: 0 auto;
 }
@@ -263,6 +325,10 @@ watch(() => props.slug, load);
   .product-page__status {
     padding-left: 16px;
     padding-right: 16px;
+  }
+
+  .product-page__close {
+    left: 16px;
   }
 }
 </style>
