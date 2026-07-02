@@ -127,7 +127,7 @@ onMounted(async () => {
 }
 
 .gallery-container {
-  max-width: 1100px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 0 32px;
 }

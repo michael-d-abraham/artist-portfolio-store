@@ -5,22 +5,26 @@
       v-if="!showAddToCart"
       v-bind="galleryLinkBindings"
       class="product-card-link"
-      :aria-label="`${displayProductName(product)} — view product`"
+      :aria-label="`${productTitle(product)} — view product`"
       @click="onGalleryLinkClick"
     >
-      <div class="product-image-frame">
-        <img
-          v-if="primaryProductImageUrl(product)"
-          class="product-image"
-          :src="primaryProductImageUrl(product)"
-          :alt="thumbAlt(product)"
-          loading="lazy"
-        />
-        <span v-else class="product-image product-image--placeholder">No image</span>
+      <div class="product-image-frame gallery-wall-scene">
+        <div class="gallery-art-frame">
+          <div class="gallery-art-mat">
+            <img
+              v-if="primaryProductImageUrl(product)"
+              class="product-image gallery-art-image"
+              :src="primaryProductImageUrl(product)"
+              :alt="thumbAlt(product)"
+              loading="lazy"
+            />
+            <span v-else class="product-image product-image--placeholder gallery-art-image">No image</span>
+          </div>
+        </div>
       </div>
-      <div class="product-info">
-        <h3 class="product-title">{{ displayProductName(product) }}</h3>
-        <p class="product-price">{{ formatMoneyFromCents(product.price_cents, product.currency || 'usd') }}</p>
+      <div class="product-info gallery-product-meta">
+        <h3 class="product-title gallery-product-title">{{ productTitle(product) }}</h3>
+        <p class="product-price gallery-product-price">{{ formatMoneyFromCents(product.price_cents, product.currency || 'usd') }}</p>
       </div>
     </component>
 
@@ -28,7 +32,7 @@
       <router-link
         :to="detailRoute"
         class="product-image-link"
-        :aria-label="`${displayProductName(product)} — view product`"
+        :aria-label="`${productTitle(product)} — view product`"
       >
         <div class="product-image-frame">
           <img
@@ -47,7 +51,7 @@
           :to="detailRoute"
           class="product-title-link"
         >
-          <h3 class="product-title">{{ displayProductName(product) }}</h3>
+          <h3 class="product-title">{{ productTitle(product) }}</h3>
         </router-link>
         <p class="product-price">{{ formatMoneyFromCents(product.price_cents, product.currency || 'usd') }}</p>
       </div>
